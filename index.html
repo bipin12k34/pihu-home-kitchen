@@ -441,9 +441,33 @@ nav.bottom-nav{
 .bottom-nav a .cart-badge{top:-2px;right:2px}
 
 /* ============ Admin ============ */
-#admin{max-height:0;overflow:hidden;opacity:0;transition:max-height .55s var(--ease-out), opacity .4s ease}
-#admin.open{max-height:6000px;opacity:1}
+#admin,#staffPanel{max-height:0;overflow:hidden;opacity:0;transition:max-height .55s var(--ease-out), opacity .4s ease}
+#admin.open,#staffPanel.open{max-height:6000px;opacity:1}
 .admin-badge{display:inline-block;background:var(--maroon);color:var(--saffron-cream);font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:999px;margin-bottom:14px}
+
+/* Order log dashboard */
+.order-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.order-stat{background:rgba(212,175,55,.07);border:1px solid rgba(212,175,55,.2);border-radius:var(--radius-sm);padding:12px 8px;text-align:center}
+.order-stat span{display:block;font-family:var(--font-display);font-size:1.3rem;color:var(--gold-soft)}
+.order-stat small{display:block;font-size:.66rem;color:var(--on-surface-variant);margin-top:2px}
+.order-log-row{border-bottom:1px solid rgba(212,175,55,.12);padding:10px 0}
+.order-log-row:last-child{border-bottom:0}
+.order-log-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}
+.order-log-who{font-weight:600;color:var(--saffron-cream);font-size:.9rem}
+.order-log-badge{font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:3px 9px;border-radius:999px;flex:none}
+.order-log-badge.paid{background:rgba(46,125,50,.18);color:var(--herb-green);border:1px solid rgba(46,125,50,.4)}
+.order-log-badge.cod{background:rgba(156,127,52,.15);color:var(--gold-dim);border:1px solid rgba(156,127,52,.35)}
+.order-log-items{color:var(--on-surface-variant);font-size:.82rem;margin-bottom:4px}
+.order-log-bottom{display:flex;justify-content:space-between;color:var(--on-surface-variant);font-size:.78rem}
+.order-log-total{color:var(--gold-soft);font-weight:700}
+
+/* Sold out state */
+.sold-out-badge{
+  background:rgba(126,40,56,.18);color:#e8a3b0;border:1px solid rgba(126,40,56,.5);
+  font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  padding:6px 14px;border-radius:999px;
+}
+.dish-visual.sold-out{filter:grayscale(.65) brightness(.55)}
 .staff-result{display:flex;justify-content:space-between;align-items:center;background:rgba(212,175,55,.07);border-radius:var(--radius-sm);padding:10px 14px;margin-top:8px;animation:slideFadeIn .3s var(--ease-out)}
 .price-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(212,175,55,.1)}
 .price-row input{width:90px}
@@ -612,8 +636,9 @@ select{
     </div>
     <div class="footer-tag" id="footerTag">© 2026 Pihu Home Kitchen.<br>Ghar jaisa swad, 5-star precision.</div>
   </div>
-  <div style="text-align:center;margin-top:24px">
-    <button class="footer-links" style="background:none;border:0;color:var(--on-surface-variant);text-decoration:underline;font-size:.76rem;cursor:pointer" onclick="openAdminLogin()">Owner login</button>
+  <div style="text-align:center;margin-top:24px;display:flex;gap:20px;justify-content:center;flex-wrap:wrap">
+    <button style="background:none;border:0;color:var(--on-surface-variant);text-decoration:underline;font-size:.76rem;cursor:pointer" onclick="openAdminLogin()">Owner login</button>
+    <button style="background:none;border:0;color:var(--on-surface-variant);text-decoration:underline;font-size:.76rem;cursor:pointer" onclick="openStaffLogin()">Staff login</button>
   </div>
 </footer>
 
@@ -665,10 +690,23 @@ select{
   <div class="modal" style="max-width:340px" role="dialog" aria-modal="true" aria-labelledby="pinModalTitle">
     <button class="modal-close" onclick="closeModal('pinModal')" aria-label="Close"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg></button>
     <h3 id="pinModalTitle" style="font-size:1.2rem">Owner Login</h3>
-    <p class="sub">Enter your PIN to manage the menu &amp; settings</p>
-    <label class="field"><span>PIN</span><input type="password" id="adminPinInput" inputmode="numeric" placeholder="••••"></label>
+    <p class="sub">Enter your password to manage the menu &amp; settings</p>
+    <label class="field"><span>Password</span><input type="password" id="adminPinInput" placeholder="Enter password" autocomplete="current-password"></label>
     <button class="btn btn-gold btn-block" onclick="tryAdminLogin()">Unlock</button>
-    <p class="hint" style="text-align:center;margin-top:14px">First time here? Default PIN is <b>1234</b> — change it once you're in. This is basic, browser-side protection; for a business handling real payments, pair it with proper hosting-level access control.</p>
+    <p class="hint" style="text-align:center;margin-top:14px">First time here? Default password is <b>pihu1234</b> — change it immediately once you're in, under "Change Owner Password." Repeated wrong attempts trigger a temporary lockout. This is still browser-side protection, not enterprise security — pair it with proper hosting-level access control for a business handling real payments.</p>
+  </div>
+</div>
+
+<!-- ============ Staff login (price + photo only) ============ -->
+<div class="modal-overlay" id="staffLoginModal">
+  <div class="modal" style="max-width:340px" role="dialog" aria-modal="true" aria-labelledby="staffLoginTitle">
+    <button class="modal-close" onclick="closeModal('staffLoginModal')" aria-label="Close"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg></button>
+    <h3 id="staffLoginTitle" style="font-size:1.2rem">Staff Login</h3>
+    <p class="sub">Sign in to update dish prices and photos</p>
+    <label class="field"><span>Username</span><input type="text" id="staffUserInput" autocomplete="username"></label>
+    <label class="field"><span>Password</span><input type="password" id="staffPassInput" autocomplete="current-password"></label>
+    <button class="btn btn-gold btn-block" onclick="tryStaffLogin()">Sign In</button>
+    <p class="hint" style="text-align:center;margin-top:14px">Ask the owner for your login if you don't have one. This account can only change prices and photos — nothing else on the site.</p>
   </div>
 </div>
 
@@ -682,10 +720,63 @@ select{
   </div>
 </div>
 
+<!-- ============ Staff panel (price + photo only, no other settings) ============ -->
+<section id="staffPanel">
+  <div class="container">
+    <div class="gold-divider" style="margin:16px 0 40px"></div>
+    <div class="card">
+      <span class="admin-badge">Staff Access</span>
+      <h3 style="color:var(--gold-soft)">Price &amp; Photo Management</h3>
+      <p class="hint" style="margin-top:-4px">Update prices or attach a dish photo below. For anything else — WhatsApp number, UPI details, deleting a dish — ask the owner.</p>
+      <div id="staffPriceAdmin"></div>
+      <button class="btn btn-maroon" style="margin-top:14px" onclick="savePricesFrom('staff')">Save Prices</button>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3 style="color:var(--gold-soft)">Add a Menu Item</h3>
+      <label class="field"><span>Item name</span><input type="text" id="newName-staff" placeholder="e.g. Rajma Chawal"></label>
+      <label class="field"><span>Price (₹)</span><input type="number" id="newPrice-staff" min="0" placeholder="150"></label>
+      <label class="field">
+        <span>Photo (optional — leave blank to use an auto-generated illustration)</span>
+        <div style="display:flex;align-items:center;gap:12px">
+          <label class="btn btn-ghost" style="cursor:pointer">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2h6l2 2h3a1 1 0 011 1v9a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
+            Choose Photo
+            <input type="file" accept="image/*" id="newPhoto-staff" style="display:none" onchange="previewNewPhoto(this,'staff')">
+          </label>
+          <img id="newPhotoPreview-staff" alt="" style="width:52px;height:52px;border-radius:10px;object-fit:cover;display:none;border:1px solid rgba(212,175,55,.4)">
+          <button type="button" class="remove-x" id="newPhotoClear-staff" style="display:none" onclick="clearNewPhoto('staff')">remove</button>
+        </div>
+      </label>
+      <button class="btn btn-maroon" onclick="addNewItem('staff')">Add Item</button>
+    </div>
+
+    <button class="btn btn-outline btn-block admin-close" onclick="closeStaffPanel()">Log out</button>
+  </div>
+</section>
+
 <!-- ============ Admin panel ============ -->
 <section id="admin">
   <div class="container">
     <div class="gold-divider" style="margin:16px 0 40px"></div>
+    <div class="card" id="adminSecurityWarning" style="display:none;border-color:rgba(220,150,60,.5);background:rgba(220,150,60,.08)">
+      <h3 style="color:#e0a84a;font-size:1.05rem;margin-bottom:6px">⚠ Still using the default password</h3>
+      <p style="color:var(--on-surface-variant);font-size:.88rem;margin-bottom:0">Anyone who knows this site's default owner password could get in. Scroll down to <b>Change Owner Password</b> and set your own — it takes a few seconds.</p>
+    </div>
+
+    <div class="card">
+      <span class="admin-badge">Owner Only</span>
+      <h3 style="color:var(--gold-soft)">Today's Orders</h3>
+      <div class="order-stats">
+        <div class="order-stat"><span id="statTodayOrders">0</span><small>Orders today</small></div>
+        <div class="order-stat"><span id="statTodayRevenue">₹0</span><small>Est. revenue today</small></div>
+        <div class="order-stat"><span id="statTotalOrders">0</span><small>Logged in total</small></div>
+      </div>
+      <div id="orderLogList"></div>
+      <button class="btn btn-ghost" style="margin-top:14px" onclick="clearOrderLog()">Clear order log</button>
+      <p class="hint" style="margin-top:10px;margin-bottom:0">This is a local record kept in this browser only — it's a convenience log, not a replacement for checking WhatsApp for the real order.</p>
+    </div>
+
     <div class="card">
       <span class="admin-badge">Owner Only</span>
       <h3 style="color:var(--gold-soft)">Restaurant Settings</h3>
@@ -706,14 +797,26 @@ select{
     <div class="card" style="margin-top:16px">
       <h3 style="color:var(--gold-soft)">Price Management</h3>
       <div id="priceAdmin"></div>
-      <button class="btn btn-maroon" style="margin-top:14px" onclick="savePrices()">Save Prices</button>
+      <button class="btn btn-maroon" style="margin-top:14px" onclick="savePricesFrom('owner')">Save Prices</button>
     </div>
 
     <div class="card" style="margin-top:16px">
       <h3 style="color:var(--gold-soft)">Add a Menu Item</h3>
-      <label class="field"><span>Item name</span><input type="text" id="newName" placeholder="e.g. Rajma Chawal"></label>
-      <label class="field"><span>Price (₹)</span><input type="number" id="newPrice" min="0" placeholder="150"></label>
-      <button class="btn btn-maroon" onclick="addNewItem()">Add Item</button>
+      <label class="field"><span>Item name</span><input type="text" id="newName-owner" placeholder="e.g. Rajma Chawal"></label>
+      <label class="field"><span>Price (₹)</span><input type="number" id="newPrice-owner" min="0" placeholder="150"></label>
+      <label class="field">
+        <span>Photo (optional — leave blank to use an auto-generated illustration)</span>
+        <div style="display:flex;align-items:center;gap:12px">
+          <label class="btn btn-ghost" style="cursor:pointer">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2h6l2 2h3a1 1 0 011 1v9a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
+            Choose Photo
+            <input type="file" accept="image/*" id="newPhoto-owner" style="display:none" onchange="previewNewPhoto(this,'owner')">
+          </label>
+          <img id="newPhotoPreview-owner" alt="" style="width:52px;height:52px;border-radius:10px;object-fit:cover;display:none;border:1px solid rgba(212,175,55,.4)">
+          <button type="button" class="remove-x" id="newPhotoClear-owner" style="display:none" onclick="clearNewPhoto('owner')">remove</button>
+        </div>
+      </label>
+      <button class="btn btn-maroon" onclick="addNewItem('owner')">Add Item</button>
     </div>
 
     <div class="card" style="margin-top:16px">
@@ -723,9 +826,17 @@ select{
     </div>
 
     <div class="card" style="margin-top:16px">
-      <h3 style="color:var(--gold-soft)">Change Owner PIN</h3>
-      <label class="field"><span>New PIN</span><input type="password" id="newPin" inputmode="numeric" placeholder="4+ digits"></label>
-      <button class="btn btn-maroon" onclick="changeAdminPin()">Update PIN</button>
+      <h3 style="color:var(--gold-soft)">Change Owner Password</h3>
+      <label class="field"><span>New password</span><input type="password" id="newPin" placeholder="6+ characters" autocomplete="new-password"></label>
+      <button class="btn btn-maroon" onclick="changeAdminPin()">Update Password</button>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3 style="color:var(--gold-soft)">Staff Login</h3>
+      <p class="hint" style="margin-top:-4px">Give this username and password to whoever should only be able to update prices and photos — not full settings.</p>
+      <label class="field"><span>Staff username</span><input type="text" id="staffUserSetting"></label>
+      <label class="field"><span>New staff password</span><input type="password" id="staffPassSetting" placeholder="Leave blank to keep the current one" autocomplete="new-password"></label>
+      <button class="btn btn-maroon" onclick="saveStaffCredentials()">Update Staff Login</button>
     </div>
 
     <button class="btn btn-outline btn-block admin-close" onclick="closeAdmin()">Close owner panel</button>
@@ -758,7 +869,7 @@ function loadJSON(key,fallback){
 let items=loadJSON("pihuItemsV3",null);
 if(!Array.isArray(items)||!items.length){items=defaultItems;}
 // migrate items saved before bento flags existed
-items=items.map(it=>({featured:false,dishOfDay:false,...it}));
+items=items.map(it=>({featured:false,dishOfDay:false,soldOut:false,...it}));
 if(!items.some(it=>it.featured)) items[0].featured=true;
 
 let settings=loadJSON("pihuSettingsV2",{
@@ -802,7 +913,13 @@ const infoContent={
    HELPERS
    ============================================================ */
 function saveCart(){ localStorage.setItem("pihuCartV2", JSON.stringify(cart)); }
-function saveItems(){ localStorage.setItem("pihuItemsV3", JSON.stringify(items)); }
+function saveItems(){
+  try{
+    localStorage.setItem("pihuItemsV3", JSON.stringify(items));
+  }catch(e){
+    alert("Couldn't save — your browser's storage is full. Try removing a photo from another dish, or use a smaller image.");
+  }
+}
 function money(n){ return Number(n||0).toFixed(0); }
 function cartTotal(){
   let t=0;
@@ -903,6 +1020,19 @@ function dishArtDataUri(name){
 /* ============================================================
    MENU — bento grid
    ============================================================ */
+const ICON_MINUS_SVG='<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+const ICON_PLUS_SVG='<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+function addControlHTML(i, qty, soldOut, fabClass){
+  if(qty>0){
+    const plusAttrs=soldOut ? ' disabled title="Sold out"' : '';
+    return `<div class="stepper"><button onclick="changeQty(${i},-1)" aria-label="Decrease">${ICON_MINUS_SVG}</button><span class="qn">${qty}</span><button onclick="changeQty(${i},1)" aria-label="Increase"${plusAttrs}>${ICON_PLUS_SVG}</button></div>`;
+  }
+  if(soldOut){
+    return `<span class="sold-out-badge">Sold Out</span>`;
+  }
+  return `<button class="${fabClass}" onclick="addToCart(${i},this)" aria-label="Add">${ICON_PLUS_SVG}</button>`;
+}
+
 function renderMenu(){
   const box=document.getElementById("menuGrid");
   let featuredIdx=items.findIndex(it=>it.featured);
@@ -915,7 +1045,7 @@ function renderMenu(){
   if(items[featuredIdx]){
     const i=featuredIdx, it=items[i], qty=cart[i]||0;
     html+=`<div class="bento-featured reveal in-view">
-      <div class="dish-visual" style="${dishVisualStyle(it)}"></div>
+      <div class="dish-visual${it.soldOut?" sold-out":""}" style="${dishVisualStyle(it)}"></div>
       <div class="bento-featured-overlay"></div>
       <div class="bento-featured-text">
         <div class="eyebrow-row"><div class="veg-mark"></div><span class="eyebrow-label">Signature Thali</span></div>
@@ -923,10 +1053,7 @@ function renderMenu(){
         <p>${it.desc?escapeHTML(it.desc):"Slow-cooked, home-style, made fresh to order."}</p>
         <div class="dish-cta-row">
           <span class="dish-price">₹${it.p}</span>
-          ${qty>0
-            ? `<div class="stepper"><button onclick="changeQty(${i},-1)" aria-label="Decrease"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button><span class="qn">${qty}</span><button onclick="changeQty(${i},1)" aria-label="Increase"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button></div>`
-            : `<button class="add-fab" onclick="addToCart(${i},this)" aria-label="Add"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>`
-          }
+          ${addControlHTML(i, qty, it.soldOut, "add-fab")}
         </div>
       </div>
     </div>`;
@@ -938,7 +1065,7 @@ function renderMenu(){
     const i=dishDayIdx, it=items[i], qty=cart[i]||0;
     html+=`<div class="bento-dishday reveal in-view">
       <div class="dishday-badge">Dish of the Day</div>
-      <div class="dish-visual" style="${dishVisualStyle(it)}"></div>
+      <div class="dish-visual${it.soldOut?" sold-out":""}" style="${dishVisualStyle(it)}"></div>
       <div class="bento-dishday-overlay"></div>
       <div class="bento-dishday-text">
         <div class="eyebrow-row"><div class="veg-mark"></div></div>
@@ -946,10 +1073,7 @@ function renderMenu(){
         <p>${it.desc?escapeHTML(it.desc):"A house favourite, simmered slow."}</p>
         <div class="dish-cta-row">
           <span class="dish-price">₹${it.p}</span>
-          ${qty>0
-            ? `<div class="stepper"><button onclick="changeQty(${i},-1)" aria-label="Decrease"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button><span class="qn">${qty}</span><button onclick="changeQty(${i},1)" aria-label="Increase"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button></div>`
-            : `<button class="add-fab" onclick="addToCart(${i},this)" aria-label="Add"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>`
-          }
+          ${addControlHTML(i, qty, it.soldOut, "add-fab")}
         </div>
       </div>
     </div>`;
@@ -959,18 +1083,14 @@ function renderMenu(){
   stackIdxs.forEach(i=>{
     const it=items[i], qty=cart[i]||0;
     html+=`<div class="dish-row glass reveal in-view">
-      <div class="dish-visual" style="${dishVisualStyle(it)};border-radius:14px"></div>
+      <div class="dish-visual${it.soldOut?" sold-out":""}" style="${dishVisualStyle(it)};border-radius:14px"></div>
       <div class="dish-row-body">
         <h4>${escapeHTML(it.n)}</h4>
         <p>${it.desc?escapeHTML(it.desc):"Made fresh, home-style."}</p>
         <div class="dish-row-foot">
           <span class="dish-price" style="font-size:1.05rem">₹${it.p}</span>
-          ${qty>0
-            ? `<div class="stepper"><button onclick="changeQty(${i},-1)" aria-label="Decrease"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button><span class="qn">${qty}</span><button onclick="changeQty(${i},1)" aria-label="Increase"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button></div>`
-            : `<button class="add-fab-sm" onclick="addToCart(${i},this)" aria-label="Add"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>`
-          }
+          ${addControlHTML(i, qty, it.soldOut, "add-fab-sm")}
         </div>
-        <button class="remove-x" onclick="removeItem(${i})">remove from menu</button>
       </div>
     </div>`;
   });
@@ -980,6 +1100,7 @@ function renderMenu(){
 }
 
 function addToCart(i,btn){
+  if(items[i] && items[i].soldOut) return;
   if(btn){
     btn.classList.add("added");
     btn.innerHTML=`<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="4,12 9,18 20,6"/></svg>`;
@@ -995,6 +1116,7 @@ function addToCart(i,btn){
   else doAdd();
 }
 function changeQty(i,d){
+  if(d>0 && items[i] && items[i].soldOut) return;
   cart[i]=(cart[i]||0)+d;
   if(cart[i]<=0) delete cart[i];
   saveCart();
@@ -1186,20 +1308,73 @@ function sendWhatsAppOrder(paid){
   const notes=document.getElementById("orderNotes").value.trim();
   const id=orderId();
   const total=cartTotal();
+  const lineItems=entries.map(i=>({n:items[i].n, q:cart[i], p:items[i].p}));
 
   let msg=`*${settings.name} — New Order*\n`;
   msg+=`Order ID: ${id}\n`;
   if(name) msg+=`Customer: ${name}\n`;
   if(phone) msg+=`Mobile: ${phone}\n`;
   msg+=`\n`;
-  entries.forEach(i=>{ msg+=`• ${items[i].n} × ${cart[i]} — ₹${items[i].p*cart[i]}\n`; });
+  lineItems.forEach(li=>{ msg+=`• ${li.n} × ${li.q} — ₹${li.p*li.q}\n`; });
   msg+=`\n*Total: ₹${money(total)}*\n`;
   msg+= paid ? `Payment: ✅ Paid via UPI to ${activeUpi()} — please verify and confirm.\n` : `Payment: Cash / Pay on delivery.\n`;
   if(notes) msg+=`Notes: ${notes}\n`;
   if(customerLocation.lat!==null) msg+=`Location: https://www.google.com/maps?q=${customerLocation.lat},${customerLocation.lng}\n`;
 
+  logOrder({id, time:new Date().toISOString(), name, phone, notes, items:lineItems, total, paid});
   window.open("https://wa.me/"+settings.phone+"?text="+encodeURIComponent(msg),"_blank");
   closeModal("payModal");
+}
+
+/* ============================================================
+   ORDER LOG — local record of every order placed, for the owner dashboard
+   ============================================================ */
+function logOrder(order){
+  const log=loadJSON("pihuOrderLog",[]);
+  log.unshift(order);
+  if(log.length>200) log.length=200; // keep storage bounded
+  try{ localStorage.setItem("pihuOrderLog", JSON.stringify(log)); }
+  catch(e){ /* storage full — order still reached WhatsApp, log is best-effort */ }
+  renderOrderLog();
+}
+function isSameDay(iso, ref){
+  const d=new Date(iso);
+  return d.getFullYear()===ref.getFullYear() && d.getMonth()===ref.getMonth() && d.getDate()===ref.getDate();
+}
+function renderOrderLog(){
+  const box=document.getElementById("orderLogList");
+  if(!box) return;
+  const log=loadJSON("pihuOrderLog",[]);
+  const today=new Date();
+  const todays=log.filter(o=>isSameDay(o.time, today));
+  const todayRevenue=todays.reduce((s,o)=>s+(o.total||0),0);
+
+  document.getElementById("statTodayOrders").textContent=todays.length;
+  document.getElementById("statTodayRevenue").textContent="₹"+money(todayRevenue);
+  document.getElementById("statTotalOrders").textContent=log.length;
+
+  if(!log.length){
+    box.innerHTML=`<p class="cart-empty">No orders logged yet — they'll appear here as customers check out.</p>`;
+    return;
+  }
+  box.innerHTML=log.slice(0,30).map(o=>{
+    const d=new Date(o.time);
+    const when=d.toLocaleDateString(undefined,{month:"short",day:"numeric"})+" · "+d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
+    const itemsLine=o.items.map(li=>`${escapeHTML(li.n)}×${li.q}`).join(", ");
+    return `<div class="order-log-row">
+      <div class="order-log-top">
+        <span class="order-log-who">${o.name?escapeHTML(o.name):"Guest"}${o.phone?` · ${escapeHTML(o.phone)}`:""}</span>
+        <span class="order-log-badge ${o.paid?"paid":"cod"}">${o.paid?"Paid":"COD"}</span>
+      </div>
+      <div class="order-log-items">${itemsLine}</div>
+      <div class="order-log-bottom"><span>${when}</span><span class="order-log-total">₹${money(o.total)}</span></div>
+    </div>`;
+  }).join("");
+}
+function clearOrderLog(){
+  if(!confirm("Clear the entire order log? This can't be undone.")) return;
+  localStorage.removeItem("pihuOrderLog");
+  renderOrderLog();
 }
 
 /* ============================================================
@@ -1274,25 +1449,124 @@ function setDishOfDay(idx){
   saveItems(); renderMenu(); renderBentoSelects();
 }
 
-function renderPriceAdmin(){
-  document.getElementById("priceAdmin").innerHTML=items.map((it,i)=>`
-    <div class="price-row"><span>${escapeHTML(it.n)}</span><input type="number" min="0" id="price-${i}" value="${it.p}"></div>
+function priceRowsHTML(prefix, allowDelete){
+  return items.map((it,i)=>`
+    <div class="price-row">
+      <span>${escapeHTML(it.n)}${it.soldOut?' <em style="color:var(--maroon);font-style:normal;font-size:.72rem">(sold out)</em>':''}</span>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--on-surface-variant);cursor:pointer">
+          <input type="checkbox" id="soldout-${prefix}-${i}" ${it.soldOut?"checked":""} onchange="toggleSoldOut(${i},this.checked)" style="width:auto">Sold out
+        </label>
+        <input type="number" min="0" id="price-${prefix}-${i}" value="${it.p}">
+        <button type="button" class="btn btn-ghost" style="padding:7px 10px" onclick="document.getElementById('photoInput-${prefix}-${i}').click()" title="Change photo">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2h6l2 2h3a1 1 0 011 1v9a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
+        </button>
+        <input type="file" accept="image/*" id="photoInput-${prefix}-${i}" style="display:none" onchange="updateItemPhoto(${i},this)">
+        ${it.photo ? `<button class="remove-x" onclick="removeItemPhoto(${i})">remove photo</button>` : ""}
+        ${allowDelete ? `<button class="remove-x" onclick="removeItem(${i})">delete</button>` : ""}
+      </div>
+    </div>
   `).join("");
 }
-function savePrices(){
-  items=items.map((it,i)=>({...it, p:Math.max(0, Number(document.getElementById("price-"+i).value)||0)}));
+function toggleSoldOut(i, checked){
+  if(!items[i]) return;
+  items[i].soldOut=checked;
+  saveItems();
+  renderMenu();
+  renderPriceAdmin();
+}
+function renderPriceAdmin(){
+  const ownerC=document.getElementById("priceAdmin");
+  if(ownerC) ownerC.innerHTML=priceRowsHTML("owner", true);
+  const staffC=document.getElementById("staffPriceAdmin");
+  if(staffC) staffC.innerHTML=priceRowsHTML("staff", false);
+}
+function savePricesFrom(prefix){
+  items=items.map((it,i)=>{
+    const el=document.getElementById("price-"+prefix+"-"+i);
+    return el ? {...it, p:Math.max(0, Number(el.value)||0)} : it;
+  });
   saveItems();
   renderMenu(); renderPriceAdmin(); renderCart();
   alert("Prices updated.");
 }
-function addNewItem(){
-  const name=document.getElementById("newName").value.trim();
-  const price=Math.max(0, Number(document.getElementById("newPrice").value)||0);
-  if(!name){ alert("Please enter an item name."); return; }
-  items.push({n:name,p:price,veg:true,featured:false,dishOfDay:false});
+
+/* ---- Photo upload: resize client-side before storing, so localStorage stays small ---- */
+function resizeImageFile(file, maxDim=640, quality=0.82){
+  return new Promise((resolve,reject)=>{
+    if(!file || !file.type || !file.type.startsWith("image/")){ reject(new Error("Not an image file")); return; }
+    const reader=new FileReader();
+    reader.onerror=()=>reject(new Error("Could not read file"));
+    reader.onload=e=>{
+      const img=new Image();
+      img.onerror=()=>reject(new Error("Could not decode image"));
+      img.onload=()=>{
+        let w=img.width, h=img.height;
+        if(w>h){ if(w>maxDim){ h=Math.round(h*maxDim/w); w=maxDim; } }
+        else{ if(h>maxDim){ w=Math.round(w*maxDim/h); h=maxDim; } }
+        const canvas=document.createElement("canvas");
+        canvas.width=w; canvas.height=h;
+        const ctx=canvas.getContext("2d");
+        ctx.drawImage(img,0,0,w,h);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.src=e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function previewNewPhoto(inputEl, prefix){
+  const preview=document.getElementById("newPhotoPreview-"+prefix);
+  const clearBtn=document.getElementById("newPhotoClear-"+prefix);
+  if(!inputEl.files || !inputEl.files[0]){ preview.style.display="none"; clearBtn.style.display="none"; return; }
+  preview.src=URL.createObjectURL(inputEl.files[0]);
+  preview.style.display="block";
+  clearBtn.style.display="inline";
+}
+function clearNewPhoto(prefix){
+  document.getElementById("newPhoto-"+prefix).value="";
+  document.getElementById("newPhotoPreview-"+prefix).style.display="none";
+  document.getElementById("newPhotoClear-"+prefix).style.display="none";
+}
+
+async function updateItemPhoto(i, inputEl){
+  if(!inputEl.files || !inputEl.files[0]) return;
+  try{
+    const photo=await resizeImageFile(inputEl.files[0]);
+    items[i].photo=photo;
+    saveItems();
+    renderMenu();
+    renderPriceAdmin();
+  }catch(e){
+    alert("Couldn't use that image — try a different photo.");
+  }
+  inputEl.value="";
+}
+function removeItemPhoto(i){
+  delete items[i].photo;
   saveItems();
-  document.getElementById("newName").value="";
-  document.getElementById("newPrice").value="";
+  renderMenu();
+  renderPriceAdmin();
+}
+
+async function addNewItem(prefix){
+  const name=document.getElementById("newName-"+prefix).value.trim();
+  const price=Math.max(0, Number(document.getElementById("newPrice-"+prefix).value)||0);
+  if(!name){ alert("Please enter an item name."); return; }
+
+  const item={n:name,p:price,veg:true,featured:false,dishOfDay:false};
+  const photoInput=document.getElementById("newPhoto-"+prefix);
+  if(photoInput.files && photoInput.files[0]){
+    try{ item.photo=await resizeImageFile(photoInput.files[0]); }
+    catch(e){ /* fall back silently to the auto-generated illustration */ }
+  }
+
+  items.push(item);
+  saveItems();
+  document.getElementById("newName-"+prefix).value="";
+  document.getElementById("newPrice-"+prefix).value="";
+  clearNewPhoto(prefix);
   renderMenu(); renderPriceAdmin(); renderBentoSelects();
   alert("Item added to the menu.");
 }
@@ -1306,39 +1580,170 @@ function searchStaff(){
     : `<p class="hint" style="margin-top:8px">No staff member matched.</p>`;
 }
 
-/* --- PIN protection (client-side only — see note in login modal) --- */
-function getAdminPin(){ return localStorage.getItem("pihuAdminPin")||"1234"; }
+/* ============================================================
+   AUTH — hashed credentials + lockout after repeated failed attempts.
+   Still client-side (anyone with dev tools could technically bypass a
+   check running in their own browser), but this closes the easy holes:
+   no plaintext password sitting in localStorage, and no unlimited guessing.
+   ============================================================ */
+const DEFAULT_ADMIN_PASSWORD="pihu1234";
+const DEFAULT_STAFF_PASSWORD="pihu@123";
+
+async function sha256Hex(str){
+  const enc=new TextEncoder().encode(str);
+  const buf=await crypto.subtle.digest("SHA-256", enc);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+function randomHex(bytes){
+  return Array.from(crypto.getRandomValues(new Uint8Array(bytes))).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+function getAuthSalt(scope){
+  const key="pihuAuthSalt-"+scope;
+  let salt=localStorage.getItem(key);
+  if(!salt){ salt=randomHex(16); localStorage.setItem(key,salt); }
+  return salt;
+}
+async function setAuthSecret(scope, secret){
+  const hash=await sha256Hex(getAuthSalt(scope)+":"+secret);
+  localStorage.setItem("pihuAuthHash-"+scope, hash);
+}
+async function checkAuthSecret(scope, secret, legacyPlaintextKey, hardDefault){
+  const storedHash=localStorage.getItem("pihuAuthHash-"+scope);
+  if(!storedHash){
+    // first-ever check: migrate from an older plaintext value (or the documented default) into a hash
+    const legacyVal=legacyPlaintextKey ? localStorage.getItem(legacyPlaintextKey) : null;
+    const effectiveDefault=legacyVal || hardDefault;
+    if(secret===effectiveDefault){
+      await setAuthSecret(scope, secret);
+      if(legacyPlaintextKey) localStorage.removeItem(legacyPlaintextKey);
+      return true;
+    }
+    return false;
+  }
+  const hash=await sha256Hex(getAuthSalt(scope)+":"+secret);
+  return hash===storedHash;
+}
+function getLockRemaining(scope){
+  const until=Number(localStorage.getItem("pihuAuthLock-"+scope)||0);
+  const remain=until-Date.now();
+  return remain>0 ? remain : 0;
+}
+function registerAuthFail(scope, maxAttempts, lockMs){
+  const count=Number(localStorage.getItem("pihuAuthFail-"+scope)||0)+1;
+  if(count>=maxAttempts){
+    localStorage.setItem("pihuAuthLock-"+scope, String(Date.now()+lockMs));
+    localStorage.setItem("pihuAuthFail-"+scope, "0");
+    return {locked:true, remaining:0};
+  }
+  localStorage.setItem("pihuAuthFail-"+scope, String(count));
+  return {locked:false, remaining:maxAttempts-count};
+}
+function clearAuthFail(scope){
+  localStorage.removeItem("pihuAuthFail-"+scope);
+  localStorage.removeItem("pihuAuthLock-"+scope);
+}
+
+/* --- Owner login (strictest protection: 5 attempts, then a 2-minute lockout) --- */
 function openAdminLogin(){
   document.getElementById("adminPinInput").value="";
   openModal("pinModal");
   setTimeout(()=>document.getElementById("adminPinInput").focus(),50);
 }
-function tryAdminLogin(){
-  const val=document.getElementById("adminPinInput").value.trim();
-  if(val===getAdminPin()){
+async function tryAdminLogin(){
+  const remain=getLockRemaining("admin");
+  if(remain>0){
+    alert(`Too many incorrect attempts. Try again in ${Math.ceil(remain/1000)} seconds.`);
+    return;
+  }
+  const val=document.getElementById("adminPinInput").value;
+  const ok=await checkAuthSecret("admin", val, "pihuAdminPin", DEFAULT_ADMIN_PASSWORD);
+  if(ok){
+    clearAuthFail("admin");
     sessionStorage.setItem("pihuAdminUnlocked","1");
     closeModal("pinModal");
     openAdmin();
   }else{
-    alert("Incorrect PIN.");
+    const r=registerAuthFail("admin", 5, 120000);
+    alert(r.locked ? "Too many incorrect attempts — locked for 2 minutes." : `Incorrect password. ${r.remaining} attempt(s) left before a temporary lockout.`);
   }
 }
 function openAdmin(){
   document.getElementById("admin").classList.add("open");
   renderPriceAdmin();
   renderBentoSelects();
+  loadStaffCredentialsToUI();
+  renderAdminSecurityWarning();
+  renderOrderLog();
   document.getElementById("admin").scrollIntoView({behavior:"smooth"});
 }
 function closeAdmin(){
   document.getElementById("admin").classList.remove("open");
   sessionStorage.removeItem("pihuAdminUnlocked");
 }
-function changeAdminPin(){
-  const v=document.getElementById("newPin").value.trim();
-  if(v.length<4){ alert("Use at least 4 digits for the PIN."); return; }
-  localStorage.setItem("pihuAdminPin", v);
+async function changeAdminPin(){
+  const v=document.getElementById("newPin").value;
+  if(v.length<6){ alert("Use at least 6 characters — mix in letters or symbols for a real password, not just a short PIN."); return; }
+  await setAuthSecret("admin", v);
+  localStorage.setItem("pihuAdminPasswordChanged","1");
   document.getElementById("newPin").value="";
-  alert("PIN updated. Remember it — there's no recovery for a browser-side PIN.");
+  renderAdminSecurityWarning();
+  alert("Owner password updated. Remember it — there's no recovery for a browser-side password.");
+}
+function renderAdminSecurityWarning(){
+  const el=document.getElementById("adminSecurityWarning");
+  if(!el) return;
+  el.style.display=localStorage.getItem("pihuAdminPasswordChanged")==="1" ? "none" : "block";
+}
+
+/* --- Staff login: price + photo only, no other settings --- */
+function getStaffUser(){ return localStorage.getItem("pihuStaffUser")||"staff"; }
+function loadStaffCredentialsToUI(){
+  document.getElementById("staffUserSetting").value=getStaffUser();
+  document.getElementById("staffPassSetting").value="";
+}
+async function saveStaffCredentials(){
+  const u=document.getElementById("staffUserSetting").value.trim();
+  const p=document.getElementById("staffPassSetting").value;
+  if(!u){ alert("Username can't be empty."); return; }
+  if(p && p.length<6){ alert("Use at least 6 characters for the staff password."); return; }
+  localStorage.setItem("pihuStaffUser", u);
+  if(p){ await setAuthSecret("staffpass", p); }
+  document.getElementById("staffPassSetting").value="";
+  alert(p ? "Staff login updated." : "Staff username updated. (Password left unchanged — enter a new one to change it too.)");
+}
+function openStaffLogin(){
+  document.getElementById("staffUserInput").value="";
+  document.getElementById("staffPassInput").value="";
+  openModal("staffLoginModal");
+  setTimeout(()=>document.getElementById("staffUserInput").focus(),50);
+}
+async function tryStaffLogin(){
+  const remain=getLockRemaining("staffpass");
+  if(remain>0){
+    alert(`Too many incorrect attempts. Try again in ${Math.ceil(remain/1000)} seconds.`);
+    return;
+  }
+  const u=document.getElementById("staffUserInput").value.trim();
+  const p=document.getElementById("staffPassInput").value;
+  const passOk=await checkAuthSecret("staffpass", p, "pihuStaffPass", DEFAULT_STAFF_PASSWORD);
+  if(u===getStaffUser() && passOk){
+    clearAuthFail("staffpass");
+    sessionStorage.setItem("pihuStaffUnlocked","1");
+    closeModal("staffLoginModal");
+    openStaffPanel();
+  }else{
+    const r=registerAuthFail("staffpass", 6, 60000);
+    alert(r.locked ? "Too many incorrect attempts — locked for 60 seconds." : `Incorrect username or password. ${r.remaining} attempt(s) left before a temporary lockout.`);
+  }
+}
+function openStaffPanel(){
+  document.getElementById("staffPanel").classList.add("open");
+  renderPriceAdmin();
+  document.getElementById("staffPanel").scrollIntoView({behavior:"smooth"});
+}
+function closeStaffPanel(){
+  document.getElementById("staffPanel").classList.remove("open");
+  sessionStorage.removeItem("pihuStaffUnlocked");
 }
 
 /* close modals on backdrop click / Escape */
@@ -1401,6 +1806,7 @@ function init(){
   renderPriceAdmin();
   renderBentoSelects();
   if(sessionStorage.getItem("pihuAdminUnlocked")==="1") openAdmin();
+  if(sessionStorage.getItem("pihuStaffUnlocked")==="1") openStaffPanel();
   updateActiveNav();
   initScrollReveal();
 }
