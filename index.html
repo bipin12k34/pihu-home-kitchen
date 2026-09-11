@@ -637,8 +637,7 @@ select{
     <div class="footer-tag" id="footerTag">© 2026 Pihu Home Kitchen.<br>Ghar jaisa swad, 5-star precision.</div>
   </div>
   <div style="text-align:center;margin-top:24px;display:flex;gap:20px;justify-content:center;flex-wrap:wrap">
-    <button style="background:none;border:0;color:var(--on-surface-variant);text-decoration:underline;font-size:.76rem;cursor:pointer" onclick="openAdminLogin()">Owner login</button>
-    <button style="background:none;border:0;color:var(--on-surface-variant);text-decoration:underline;font-size:.76rem;cursor:pointer" onclick="openStaffLogin()">Staff login</button>
+    <button style="background:none;border:0;color:var(--on-surface-variant);text-decoration:underline;font-size:.76rem;cursor:pointer" onclick="openLoginModal()">Team Login</button>
   </div>
 </footer>
 
@@ -685,28 +684,16 @@ select{
   </div>
 </div>
 
-<!-- ============ Admin PIN modal ============ -->
-<div class="modal-overlay" id="pinModal">
-  <div class="modal" style="max-width:340px" role="dialog" aria-modal="true" aria-labelledby="pinModalTitle">
-    <button class="modal-close" onclick="closeModal('pinModal')" aria-label="Close"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg></button>
-    <h3 id="pinModalTitle" style="font-size:1.2rem">Owner Login</h3>
-    <p class="sub">Enter your password to manage the menu &amp; settings</p>
-    <label class="field"><span>Password</span><input type="password" id="adminPinInput" placeholder="Enter password" autocomplete="current-password"></label>
-    <button class="btn btn-gold btn-block" onclick="tryAdminLogin()">Unlock</button>
-    <p class="hint" style="text-align:center;margin-top:14px">First time here? Default password is <b>pihu1234</b> — change it immediately once you're in, under "Change Owner Password." Repeated wrong attempts trigger a temporary lockout. This is still browser-side protection, not enterprise security — pair it with proper hosting-level access control for a business handling real payments.</p>
-  </div>
-</div>
-
-<!-- ============ Staff login (price + photo only) ============ -->
-<div class="modal-overlay" id="staffLoginModal">
-  <div class="modal" style="max-width:340px" role="dialog" aria-modal="true" aria-labelledby="staffLoginTitle">
-    <button class="modal-close" onclick="closeModal('staffLoginModal')" aria-label="Close"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg></button>
-    <h3 id="staffLoginTitle" style="font-size:1.2rem">Staff Login</h3>
-    <p class="sub">Sign in to update dish prices and photos</p>
-    <label class="field"><span>Username</span><input type="text" id="staffUserInput" autocomplete="username"></label>
-    <label class="field"><span>Password</span><input type="password" id="staffPassInput" autocomplete="current-password"></label>
-    <button class="btn btn-gold btn-block" onclick="tryStaffLogin()">Sign In</button>
-    <p class="hint" style="text-align:center;margin-top:14px">Ask the owner for your login if you don't have one. This account can only change prices and photos — nothing else on the site.</p>
+<!-- ============ Team login (email/password via Firebase Auth) ============ -->
+<div class="modal-overlay" id="loginModal">
+  <div class="modal" style="max-width:340px" role="dialog" aria-modal="true" aria-labelledby="loginModalTitle">
+    <button class="modal-close" onclick="closeModal('loginModal')" aria-label="Close"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg></button>
+    <h3 id="loginModalTitle" style="font-size:1.2rem">Team Login</h3>
+    <p class="sub">Owner and staff both sign in here</p>
+    <label class="field"><span>Email</span><input type="email" id="loginEmailInput" autocomplete="username"></label>
+    <label class="field"><span>Password</span><input type="password" id="loginPasswordInput" autocomplete="current-password"></label>
+    <button class="btn btn-gold btn-block" onclick="tryLogin()">Sign In</button>
+    <p class="hint" style="text-align:center;margin-top:14px" id="loginHint">You'll automatically land on the right panel for your account.</p>
   </div>
 </div>
 
@@ -751,7 +738,13 @@ select{
       <button class="btn btn-maroon" onclick="addNewItem('staff')">Add Item</button>
     </div>
 
-    <button class="btn btn-outline btn-block admin-close" onclick="closeStaffPanel()">Log out</button>
+    <div class="card" style="margin-top:16px">
+      <h3 style="color:var(--gold-soft)">Change My Password</h3>
+      <label class="field"><span>New password</span><input type="password" id="staffNewPassword" placeholder="6+ characters" autocomplete="new-password"></label>
+      <button class="btn btn-maroon" onclick="changeMyPassword()">Update Password</button>
+    </div>
+
+    <button class="btn btn-outline btn-block admin-close" onclick="staffSignOut()">Sign Out</button>
   </div>
 </section>
 
@@ -759,10 +752,6 @@ select{
 <section id="admin">
   <div class="container">
     <div class="gold-divider" style="margin:16px 0 40px"></div>
-    <div class="card" id="adminSecurityWarning" style="display:none;border-color:rgba(220,150,60,.5);background:rgba(220,150,60,.08)">
-      <h3 style="color:#e0a84a;font-size:1.05rem;margin-bottom:6px">⚠ Still using the default password</h3>
-      <p style="color:var(--on-surface-variant);font-size:.88rem;margin-bottom:0">Anyone who knows this site's default owner password could get in. Scroll down to <b>Change Owner Password</b> and set your own — it takes a few seconds.</p>
-    </div>
 
     <div class="card">
       <span class="admin-badge">Owner Only</span>
@@ -774,7 +763,7 @@ select{
       </div>
       <div id="orderLogList"></div>
       <button class="btn btn-ghost" style="margin-top:14px" onclick="clearOrderLog()">Clear order log</button>
-      <p class="hint" style="margin-top:10px;margin-bottom:0">This is a local record kept in this browser only — it's a convenience log, not a replacement for checking WhatsApp for the real order.</p>
+      <p class="hint" style="margin-top:10px;margin-bottom:0">Synced live from every device and every customer — a convenience log, not a replacement for checking WhatsApp for the real order.</p>
     </div>
 
     <div class="card">
@@ -826,26 +815,44 @@ select{
     </div>
 
     <div class="card" style="margin-top:16px">
-      <h3 style="color:var(--gold-soft)">Change Owner Password</h3>
-      <label class="field"><span>New password</span><input type="password" id="newPin" placeholder="6+ characters" autocomplete="new-password"></label>
-      <button class="btn btn-maroon" onclick="changeAdminPin()">Update Password</button>
+      <h3 style="color:var(--gold-soft)">Change My Password</h3>
+      <label class="field"><span>New password</span><input type="password" id="ownerNewPassword" placeholder="6+ characters" autocomplete="new-password"></label>
+      <button class="btn btn-maroon" onclick="changeMyPassword('owner')">Update Password</button>
     </div>
 
     <div class="card" style="margin-top:16px">
-      <h3 style="color:var(--gold-soft)">Staff Login</h3>
-      <p class="hint" style="margin-top:-4px">Give this username and password to whoever should only be able to update prices and photos — not full settings.</p>
-      <label class="field"><span>Staff username</span><input type="text" id="staffUserSetting"></label>
-      <label class="field"><span>New staff password</span><input type="password" id="staffPassSetting" placeholder="Leave blank to keep the current one" autocomplete="new-password"></label>
-      <button class="btn btn-maroon" onclick="saveStaffCredentials()">Update Staff Login</button>
+      <h3 style="color:var(--gold-soft)">Team Access</h3>
+      <p class="hint" style="margin-top:-4px">To add a new team member: create their login in Firebase Console → Authentication → Users first, then paste their User UID here to grant them access.</p>
+      <label class="field"><span>User UID</span><input type="text" id="assignUid" placeholder="Copy from Firebase Console"></label>
+      <label class="field"><span>Role</span><select id="assignRoleSelect"><option value="staff">Staff (price &amp; photo only)</option><option value="owner">Owner (full access)</option></select></label>
+      <button class="btn btn-maroon" onclick="assignRole()">Assign Role</button>
     </div>
 
-    <button class="btn btn-outline btn-block admin-close" onclick="closeAdmin()">Close owner panel</button>
+    <button class="btn btn-outline btn-block admin-close" onclick="ownerSignOut()">Sign Out</button>
   </div>
 </section>
 
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 "use strict";
+
+/* ============================================================
+   FIREBASE INIT
+   ============================================================ */
+const firebaseConfig={
+  apiKey:"AIzaSyCf_YGKDD7NTtZ18mFBzPsUTotCV7Z2714",
+  authDomain:"pihu-home-kitchen.firebaseapp.com",
+  projectId:"pihu-home-kitchen",
+  storageBucket:"pihu-home-kitchen.firebasestorage.app",
+  messagingSenderId:"263528931591",
+  appId:"1:263528931591:web:f7cb0476a64d768fc125a2"
+};
+firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+const db=firebase.firestore();
 
 /* ============================================================
    STATE
@@ -866,27 +873,25 @@ function loadJSON(key,fallback){
   catch(e){return fallback;}
 }
 
-let items=loadJSON("pihuItemsV3",null);
-if(!Array.isArray(items)||!items.length){items=defaultItems;}
-// migrate items saved before bento flags existed
-items=items.map(it=>({featured:false,dishOfDay:false,soldOut:false,...it}));
-if(!items.some(it=>it.featured)) items[0].featured=true;
-
-let settings=loadJSON("pihuSettingsV2",{
+// Shared, live-synced state — populated from Firestore, not localStorage.
+let items=[]; // each item carries an .id (Firestore document ID)
+let settings={
   name:"Pihu Home Kitchen",
   phone:"919712399261",
   upi:"pihukitchen@okaxis",
   upiAlt:"9712399261@ybl",
   maps:"https://www.google.com/maps?q=22.9693679,72.6076299&z=17&hl=en"
-});
-if(settings.upiAlt===undefined) settings.upiAlt="9712399261@ybl";
-if(!settings.maps) settings.maps="https://www.google.com/maps?q=22.9693679,72.6076299&z=17&hl=en";
+};
+let orderLog=[]; // owner-only, populated after sign-in
 
+// Per-device state — intentionally NOT synced (cart/rating are personal to this browser).
 let selectedUpiKey="primary";
 function activeUpi(){ return selectedUpiKey==="alt" && settings.upiAlt ? settings.upiAlt : settings.upi; }
-
-let cart=loadJSON("pihuCartV2",{});
+let cart=loadJSON("pihuCartV2",{}); // keyed by Firestore item id
 let customerLocation={lat:null,lng:null};
+
+let currentUser=null;
+let currentRole=null; // 'owner' | 'staff' | null
 
 const staffList=[["Poonam","9712399261"]];
 
@@ -897,7 +902,7 @@ const infoContent={
   },
   privacy:{
     title:"Privacy, Plainly",
-    body:"<p>This is a plain-language summary, not a legal document.</p><p>We only ask for what's needed to get your food to you: your name, phone number, delivery address, and — only if you choose to share it — your location. That information is used solely to fulfil your order and is never sold or handed to advertisers.</p><p>Your order details are sent directly to our WhatsApp — there's no central database storing your information on a server.</p>"
+    body:"<p>This is a plain-language summary, not a legal document.</p><p>We only ask for what's needed to get your food to you: your name, phone number, delivery address, and — only if you choose to share it — your location. That information is used solely to fulfil your order and is never sold or handed to advertisers.</p><p>Your order details are sent directly to our WhatsApp, and a copy is kept securely so we can track orders — it isn't shared beyond running this restaurant.</p>"
   },
   sustainability:{
     title:"Sustainability",
@@ -913,22 +918,16 @@ const infoContent={
    HELPERS
    ============================================================ */
 function saveCart(){ localStorage.setItem("pihuCartV2", JSON.stringify(cart)); }
-function saveItems(){
-  try{
-    localStorage.setItem("pihuItemsV3", JSON.stringify(items));
-  }catch(e){
-    alert("Couldn't save — your browser's storage is full. Try removing a photo from another dish, or use a smaller image.");
-  }
-}
+function findItemById(id){ return items.find(it=>it.id===id); }
 function money(n){ return Number(n||0).toFixed(0); }
 function cartTotal(){
   let t=0;
-  for(const i in cart){ if(items[i]) t += cart[i]*items[i].p; }
+  for(const id in cart){ const it=findItemById(id); if(it) t += cart[id]*it.p; }
   return t;
 }
 function cartCount(){
   let c=0;
-  for(const i in cart) c += cart[i];
+  for(const id in cart){ if(findItemById(id)) c += cart[id]; }
   return c;
 }
 function orderId(){ return "PHK-"+Date.now().toString().slice(-6); }
@@ -1018,32 +1017,34 @@ function dishArtDataUri(name){
 }
 
 /* ============================================================
-   MENU — bento grid
+   MENU — bento grid (rendered from live Firestore data)
    ============================================================ */
 const ICON_MINUS_SVG='<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
 const ICON_PLUS_SVG='<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
-function addControlHTML(i, qty, soldOut, fabClass){
+function addControlHTML(id, qty, soldOut, fabClass){
   if(qty>0){
     const plusAttrs=soldOut ? ' disabled title="Sold out"' : '';
-    return `<div class="stepper"><button onclick="changeQty(${i},-1)" aria-label="Decrease">${ICON_MINUS_SVG}</button><span class="qn">${qty}</span><button onclick="changeQty(${i},1)" aria-label="Increase"${plusAttrs}>${ICON_PLUS_SVG}</button></div>`;
+    return `<div class="stepper"><button onclick="changeQty('${id}',-1)" aria-label="Decrease">${ICON_MINUS_SVG}</button><span class="qn">${qty}</span><button onclick="changeQty('${id}',1)" aria-label="Increase"${plusAttrs}>${ICON_PLUS_SVG}</button></div>`;
   }
   if(soldOut){
     return `<span class="sold-out-badge">Sold Out</span>`;
   }
-  return `<button class="${fabClass}" onclick="addToCart(${i},this)" aria-label="Add">${ICON_PLUS_SVG}</button>`;
+  return `<button class="${fabClass}" onclick="addToCart('${id}',this)" aria-label="Add">${ICON_PLUS_SVG}</button>`;
 }
 
 function renderMenu(){
   const box=document.getElementById("menuGrid");
-  let featuredIdx=items.findIndex(it=>it.featured);
-  let dishDayIdx=items.findIndex(it=>it.dishOfDay);
-  if(featuredIdx===-1) featuredIdx=0;
-  if(dishDayIdx===-1 || dishDayIdx===featuredIdx) dishDayIdx=items.findIndex((it,i)=>i!==featuredIdx);
+  if(!items.length){
+    box.innerHTML=`<p class="cart-empty">Loading menu…</p>`;
+    return;
+  }
+  const featured=items.find(it=>it.featured) || items[0];
+  const dishDay=items.find(it=>it.dishOfDay && it.id!==featured.id);
 
   let html="";
 
-  if(items[featuredIdx]){
-    const i=featuredIdx, it=items[i], qty=cart[i]||0;
+  {
+    const it=featured, id=it.id, qty=cart[id]||0;
     html+=`<div class="bento-featured reveal in-view">
       <div class="dish-visual${it.soldOut?" sold-out":""}" style="${dishVisualStyle(it)}"></div>
       <div class="bento-featured-overlay"></div>
@@ -1053,16 +1054,14 @@ function renderMenu(){
         <p>${it.desc?escapeHTML(it.desc):"Slow-cooked, home-style, made fresh to order."}</p>
         <div class="dish-cta-row">
           <span class="dish-price">₹${it.p}</span>
-          ${addControlHTML(i, qty, it.soldOut, "add-fab")}
+          ${addControlHTML(id, qty, it.soldOut, "add-fab")}
         </div>
       </div>
     </div>`;
   }
 
-  const stackIdxs=items.map((_,i)=>i).filter(i=>i!==featuredIdx && i!==dishDayIdx);
-
-  if(items[dishDayIdx]){
-    const i=dishDayIdx, it=items[i], qty=cart[i]||0;
+  if(dishDay){
+    const it=dishDay, id=it.id, qty=cart[id]||0;
     html+=`<div class="bento-dishday reveal in-view">
       <div class="dishday-badge">Dish of the Day</div>
       <div class="dish-visual${it.soldOut?" sold-out":""}" style="${dishVisualStyle(it)}"></div>
@@ -1073,15 +1072,16 @@ function renderMenu(){
         <p>${it.desc?escapeHTML(it.desc):"A house favourite, simmered slow."}</p>
         <div class="dish-cta-row">
           <span class="dish-price">₹${it.p}</span>
-          ${addControlHTML(i, qty, it.soldOut, "add-fab")}
+          ${addControlHTML(id, qty, it.soldOut, "add-fab")}
         </div>
       </div>
     </div>`;
   }
 
+  const stack=items.filter(it=>it.id!==featured.id && (!dishDay || it.id!==dishDay.id));
   html+=`<div class="bento-stack">`;
-  stackIdxs.forEach(i=>{
-    const it=items[i], qty=cart[i]||0;
+  stack.forEach(it=>{
+    const id=it.id, qty=cart[id]||0;
     html+=`<div class="dish-row glass reveal in-view">
       <div class="dish-visual${it.soldOut?" sold-out":""}" style="${dishVisualStyle(it)};border-radius:14px"></div>
       <div class="dish-row-body">
@@ -1089,7 +1089,7 @@ function renderMenu(){
         <p>${it.desc?escapeHTML(it.desc):"Made fresh, home-style."}</p>
         <div class="dish-row-foot">
           <span class="dish-price" style="font-size:1.05rem">₹${it.p}</span>
-          ${addControlHTML(i, qty, it.soldOut, "add-fab-sm")}
+          ${addControlHTML(id, qty, it.soldOut, "add-fab-sm")}
         </div>
       </div>
     </div>`;
@@ -1099,15 +1099,16 @@ function renderMenu(){
   box.innerHTML=html;
 }
 
-function addToCart(i,btn){
-  if(items[i] && items[i].soldOut) return;
+function addToCart(id,btn){
+  const it=findItemById(id);
+  if(it && it.soldOut) return;
   if(btn){
     btn.classList.add("added");
     btn.innerHTML=`<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="4,12 9,18 20,6"/></svg>`;
     btn.disabled=true;
   }
   const doAdd=()=>{
-    cart[i]=(cart[i]||0)+1;
+    cart[id]=(cart[id]||0)+1;
     saveCart();
     renderMenu();
     renderCart();
@@ -1115,24 +1116,24 @@ function addToCart(i,btn){
   if(btn) setTimeout(doAdd, 260);
   else doAdd();
 }
-function changeQty(i,d){
-  if(d>0 && items[i] && items[i].soldOut) return;
-  cart[i]=(cart[i]||0)+d;
-  if(cart[i]<=0) delete cart[i];
+function changeQty(id,d){
+  const it=findItemById(id);
+  if(d>0 && it && it.soldOut) return;
+  cart[id]=(cart[id]||0)+d;
+  if(cart[id]<=0) delete cart[id];
   saveCart();
   renderMenu();
   renderCart();
 }
-function removeItem(i){
+async function removeItem(id){
   if(!confirm("Remove this dish from the menu for everyone?")) return;
-  items.splice(i,1);
-  delete cart[i];
-  const newCart={};
-  for(const k in cart){ const ki=Number(k); newCart[ki>i?ki-1:ki]=cart[k]; }
-  cart=newCart;
-  if(!items.some(it=>it.featured) && items.length) items[0].featured=true;
-  saveItems(); saveCart();
-  renderMenu(); renderCart(); renderPriceAdmin(); renderBentoSelects();
+  delete cart[id];
+  saveCart();
+  try{
+    await db.collection("menuItems").doc(id).delete();
+  }catch(e){
+    alert("Couldn't delete: "+e.message);
+  }
 }
 
 /* ============================================================
@@ -1140,15 +1141,15 @@ function removeItem(i){
    ============================================================ */
 function renderCart(){
   const list=document.getElementById("cartList");
-  const entries=Object.keys(cart).filter(i=>items[i]);
+  const entries=Object.keys(cart).filter(id=>findItemById(id));
   if(!entries.length){
     list.innerHTML=`<p class="cart-empty">Your cart is empty — add a dish above.</p>`;
   }else{
-    list.innerHTML=entries.map(i=>{
-      const it=items[i], q=cart[i];
+    list.innerHTML=entries.map(id=>{
+      const it=findItemById(id), q=cart[id];
       return `<div class="cart-line">
         <div><div class="name">${escapeHTML(it.n)}</div><div class="meta">₹${it.p} × ${q}</div></div>
-        <div class="stepper"><button onclick="changeQty(${i},-1)"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button><span class="qn">${q}</span><button onclick="changeQty(${i},1)"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button></div>
+        <div class="stepper"><button onclick="changeQty('${id}',-1)">${ICON_MINUS_SVG}</button><span class="qn">${q}</span><button onclick="changeQty('${id}',1)">${ICON_PLUS_SVG}</button></div>
       </div>`;
     }).join("");
   }
@@ -1299,7 +1300,7 @@ function fallbackCopy(text,cb){
    SEND ORDER (WhatsApp)
    ============================================================ */
 function sendWhatsAppOrder(paid){
-  const entries=Object.keys(cart).filter(i=>items[i]);
+  const entries=Object.keys(cart).filter(id=>findItemById(id));
   if(!entries.length){ alert("Your cart is empty — add a dish first."); return; }
 
   persistCustomer();
@@ -1308,7 +1309,7 @@ function sendWhatsAppOrder(paid){
   const notes=document.getElementById("orderNotes").value.trim();
   const id=orderId();
   const total=cartTotal();
-  const lineItems=entries.map(i=>({n:items[i].n, q:cart[i], p:items[i].p}));
+  const lineItems=entries.map(cid=>{ const it=findItemById(cid); return {n:it.n, q:cart[cid], p:it.p}; });
 
   let msg=`*${settings.name} — New Order*\n`;
   msg+=`Order ID: ${id}\n`;
@@ -1327,40 +1328,51 @@ function sendWhatsAppOrder(paid){
 }
 
 /* ============================================================
-   ORDER LOG — local record of every order placed, for the owner dashboard
+   ORDER LOG — synced via Firestore, visible to the owner on any device.
+   Writing an order never blocks WhatsApp — if the write fails, the
+   customer's order still goes through, we just lose that dashboard entry.
    ============================================================ */
 function logOrder(order){
-  const log=loadJSON("pihuOrderLog",[]);
-  log.unshift(order);
-  if(log.length>200) log.length=200; // keep storage bounded
-  try{ localStorage.setItem("pihuOrderLog", JSON.stringify(log)); }
-  catch(e){ /* storage full — order still reached WhatsApp, log is best-effort */ }
-  renderOrderLog();
+  db.collection("orders").add(order).catch(e=>{
+    console.error("Order logging failed (order still sent via WhatsApp):", e);
+  });
 }
 function isSameDay(iso, ref){
   const d=new Date(iso);
   return d.getFullYear()===ref.getFullYear() && d.getMonth()===ref.getMonth() && d.getDate()===ref.getDate();
 }
+let unsubOrders=null;
+function attachOrdersListener(){
+  if(unsubOrders) return;
+  unsubOrders=db.collection("orders").orderBy("time","desc").limit(200).onSnapshot(snap=>{
+    orderLog=snap.docs.map(d=>({id:d.id, ...d.data()}));
+    renderOrderLog();
+  }, err=>{
+    console.error("Order log listener error:", err);
+  });
+}
+function detachOrdersListener(){
+  if(unsubOrders){ unsubOrders(); unsubOrders=null; }
+}
 function renderOrderLog(){
   const box=document.getElementById("orderLogList");
   if(!box) return;
-  const log=loadJSON("pihuOrderLog",[]);
   const today=new Date();
-  const todays=log.filter(o=>isSameDay(o.time, today));
+  const todays=orderLog.filter(o=>isSameDay(o.time, today));
   const todayRevenue=todays.reduce((s,o)=>s+(o.total||0),0);
 
   document.getElementById("statTodayOrders").textContent=todays.length;
   document.getElementById("statTodayRevenue").textContent="₹"+money(todayRevenue);
-  document.getElementById("statTotalOrders").textContent=log.length;
+  document.getElementById("statTotalOrders").textContent=orderLog.length;
 
-  if(!log.length){
+  if(!orderLog.length){
     box.innerHTML=`<p class="cart-empty">No orders logged yet — they'll appear here as customers check out.</p>`;
     return;
   }
-  box.innerHTML=log.slice(0,30).map(o=>{
+  box.innerHTML=orderLog.slice(0,30).map(o=>{
     const d=new Date(o.time);
     const when=d.toLocaleDateString(undefined,{month:"short",day:"numeric"})+" · "+d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
-    const itemsLine=o.items.map(li=>`${escapeHTML(li.n)}×${li.q}`).join(", ");
+    const itemsLine=(o.items||[]).map(li=>`${escapeHTML(li.n)}×${li.q}`).join(", ");
     return `<div class="order-log-row">
       <div class="order-log-top">
         <span class="order-log-who">${o.name?escapeHTML(o.name):"Guest"}${o.phone?` · ${escapeHTML(o.phone)}`:""}</span>
@@ -1371,14 +1383,20 @@ function renderOrderLog(){
     </div>`;
   }).join("");
 }
-function clearOrderLog(){
+async function clearOrderLog(){
   if(!confirm("Clear the entire order log? This can't be undone.")) return;
-  localStorage.removeItem("pihuOrderLog");
-  renderOrderLog();
+  try{
+    const snap=await db.collection("orders").get();
+    const batch=db.batch();
+    snap.docs.forEach(d=>batch.delete(d.ref));
+    await batch.commit();
+  }catch(e){
+    alert("Couldn't clear: "+e.message);
+  }
 }
 
 /* ============================================================
-   RATING
+   RATING (kept local — a per-visitor vanity rating, not aggregated)
    ============================================================ */
 function setRating(n){
   localStorage.setItem("pihuRating",n);
@@ -1402,7 +1420,8 @@ function openInfo(key){
 }
 
 /* ============================================================
-   ADMIN — settings / prices / items / staff / PIN
+   ADMIN — settings / prices / items / bento highlights
+   All writes go to Firestore; onSnapshot listeners re-render automatically.
    ============================================================ */
 function applySettingsToUI(){
   document.getElementById("siteName").innerHTML=escapeHTML(settings.name)+"<em>Artisanal Precision</em>";
@@ -1415,65 +1434,71 @@ function applySettingsToUI(){
   document.getElementById("footerTag").innerHTML=`© ${new Date().getFullYear()} ${escapeHTML(settings.name)}.<br>Ghar jaisa swad, 5-star precision.`;
 }
 
-function saveSettings(){
+async function saveSettings(){
   const name=document.getElementById("restaurantName").value.trim()||"Pihu Home Kitchen";
   const phone=document.getElementById("whatsappNumber").value.replace(/\D/g,"");
   const upi=document.getElementById("upiId").value.trim();
   const upiAlt=document.getElementById("upiIdAlt").value.trim();
   const maps=document.getElementById("mapsLink").value.trim();
-  settings={name,phone:phone||"919712399261",upi:upi||"pihukitchen@okaxis",upiAlt,maps};
-  localStorage.setItem("pihuSettingsV2", JSON.stringify(settings));
-  applySettingsToUI();
-  alert("Settings saved.");
+  const newSettings={name, phone:phone||"919712399261", upi:upi||"pihukitchen@okaxis", upiAlt, maps};
+  try{
+    await db.collection("config").doc("settings").set(newSettings, {merge:true});
+    alert("Settings saved.");
+  }catch(e){
+    alert("Couldn't save settings: "+e.message);
+  }
 }
 
 function renderBentoSelects(){
   const fSel=document.getElementById("featuredSelect");
   const dSel=document.getElementById("dishDaySelect");
-  const opts=items.map((it,i)=>`<option value="${i}">${escapeHTML(it.n)}</option>`).join("");
+  if(!items.length) return;
+  const opts=items.map(it=>`<option value="${it.id}">${escapeHTML(it.n)}</option>`).join("");
   fSel.innerHTML=opts;
-  dSel.innerHTML=`<option value="-1">None</option>`+opts;
-  const fIdx=items.findIndex(it=>it.featured);
-  const dIdx=items.findIndex(it=>it.dishOfDay);
-  fSel.value=fIdx>=0?fIdx:0;
-  dSel.value=dIdx>=0?dIdx:-1;
+  dSel.innerHTML=`<option value="">None</option>`+opts;
+  const featured=items.find(it=>it.featured);
+  const dishDay=items.find(it=>it.dishOfDay);
+  fSel.value=featured ? featured.id : items[0].id;
+  dSel.value=dishDay ? dishDay.id : "";
 }
-function setFeatured(idx){
-  idx=Number(idx);
-  items.forEach((it,i)=>{ it.featured=(i===idx); });
-  saveItems(); renderMenu(); renderBentoSelects();
+async function setFeatured(id){
+  try{
+    const batch=db.batch();
+    items.forEach(it=>batch.update(db.collection("menuItems").doc(it.id), {featured: it.id===id}));
+    await batch.commit();
+  }catch(e){ alert("Couldn't update: "+e.message); }
 }
-function setDishOfDay(idx){
-  idx=Number(idx);
-  items.forEach((it,i)=>{ it.dishOfDay=(i===idx); });
-  saveItems(); renderMenu(); renderBentoSelects();
+async function setDishOfDay(id){
+  try{
+    const batch=db.batch();
+    items.forEach(it=>batch.update(db.collection("menuItems").doc(it.id), {dishOfDay: it.id===id}));
+    await batch.commit();
+  }catch(e){ alert("Couldn't update: "+e.message); }
 }
 
 function priceRowsHTML(prefix, allowDelete){
-  return items.map((it,i)=>`
+  return items.map(it=>`
     <div class="price-row">
       <span>${escapeHTML(it.n)}${it.soldOut?' <em style="color:var(--maroon);font-style:normal;font-size:.72rem">(sold out)</em>':''}</span>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <label style="display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--on-surface-variant);cursor:pointer">
-          <input type="checkbox" id="soldout-${prefix}-${i}" ${it.soldOut?"checked":""} onchange="toggleSoldOut(${i},this.checked)" style="width:auto">Sold out
+          <input type="checkbox" ${it.soldOut?"checked":""} onchange="toggleSoldOut('${it.id}',this.checked)" style="width:auto">Sold out
         </label>
-        <input type="number" min="0" id="price-${prefix}-${i}" value="${it.p}">
-        <button type="button" class="btn btn-ghost" style="padding:7px 10px" onclick="document.getElementById('photoInput-${prefix}-${i}').click()" title="Change photo">
+        <input type="number" min="0" id="price-${prefix}-${it.id}" value="${it.p}">
+        <button type="button" class="btn btn-ghost" style="padding:7px 10px" onclick="document.getElementById('photoInput-${prefix}-${it.id}').click()" title="Change photo">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2h6l2 2h3a1 1 0 011 1v9a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
         </button>
-        <input type="file" accept="image/*" id="photoInput-${prefix}-${i}" style="display:none" onchange="updateItemPhoto(${i},this)">
-        ${it.photo ? `<button class="remove-x" onclick="removeItemPhoto(${i})">remove photo</button>` : ""}
-        ${allowDelete ? `<button class="remove-x" onclick="removeItem(${i})">delete</button>` : ""}
+        <input type="file" accept="image/*" id="photoInput-${prefix}-${it.id}" style="display:none" onchange="updateItemPhoto('${it.id}',this)">
+        ${it.photo ? `<button class="remove-x" onclick="removeItemPhoto('${it.id}')">remove photo</button>` : ""}
+        ${allowDelete ? `<button class="remove-x" onclick="removeItem('${it.id}')">delete</button>` : ""}
       </div>
     </div>
   `).join("");
 }
-function toggleSoldOut(i, checked){
-  if(!items[i]) return;
-  items[i].soldOut=checked;
-  saveItems();
-  renderMenu();
-  renderPriceAdmin();
+async function toggleSoldOut(id, checked){
+  try{
+    await db.collection("menuItems").doc(id).update({soldOut:checked});
+  }catch(e){ alert("Couldn't update: "+e.message); }
 }
 function renderPriceAdmin(){
   const ownerC=document.getElementById("priceAdmin");
@@ -1481,17 +1506,21 @@ function renderPriceAdmin(){
   const staffC=document.getElementById("staffPriceAdmin");
   if(staffC) staffC.innerHTML=priceRowsHTML("staff", false);
 }
-function savePricesFrom(prefix){
-  items=items.map((it,i)=>{
-    const el=document.getElementById("price-"+prefix+"-"+i);
-    return el ? {...it, p:Math.max(0, Number(el.value)||0)} : it;
-  });
-  saveItems();
-  renderMenu(); renderPriceAdmin(); renderCart();
-  alert("Prices updated.");
+async function savePricesFrom(prefix){
+  try{
+    const batch=db.batch();
+    items.forEach(it=>{
+      const el=document.getElementById("price-"+prefix+"-"+it.id);
+      if(el) batch.update(db.collection("menuItems").doc(it.id), {p: Math.max(0, Number(el.value)||0)});
+    });
+    await batch.commit();
+    alert("Prices updated.");
+  }catch(e){
+    alert("Couldn't save prices: "+e.message);
+  }
 }
 
-/* ---- Photo upload: resize client-side before storing, so localStorage stays small ---- */
+/* ---- Photo upload: resize client-side before storing (keeps documents small & fast) ---- */
 function resizeImageFile(file, maxDim=640, quality=0.82){
   return new Promise((resolve,reject)=>{
     if(!file || !file.type || !file.type.startsWith("image/")){ reject(new Error("Not an image file")); return; }
@@ -1530,24 +1559,22 @@ function clearNewPhoto(prefix){
   document.getElementById("newPhotoClear-"+prefix).style.display="none";
 }
 
-async function updateItemPhoto(i, inputEl){
+async function updateItemPhoto(id, inputEl){
   if(!inputEl.files || !inputEl.files[0]) return;
   try{
     const photo=await resizeImageFile(inputEl.files[0]);
-    items[i].photo=photo;
-    saveItems();
-    renderMenu();
-    renderPriceAdmin();
+    await db.collection("menuItems").doc(id).update({photo});
   }catch(e){
     alert("Couldn't use that image — try a different photo.");
   }
   inputEl.value="";
 }
-function removeItemPhoto(i){
-  delete items[i].photo;
-  saveItems();
-  renderMenu();
-  renderPriceAdmin();
+async function removeItemPhoto(id){
+  try{
+    await db.collection("menuItems").doc(id).update({photo: firebase.firestore.FieldValue.delete()});
+  }catch(e){
+    alert("Couldn't remove photo: "+e.message);
+  }
 }
 
 async function addNewItem(prefix){
@@ -1555,20 +1582,22 @@ async function addNewItem(prefix){
   const price=Math.max(0, Number(document.getElementById("newPrice-"+prefix).value)||0);
   if(!name){ alert("Please enter an item name."); return; }
 
-  const item={n:name,p:price,veg:true,featured:false,dishOfDay:false};
+  const doc={n:name, p:price, veg:true, featured:false, dishOfDay:false, soldOut:false, order:Date.now()};
   const photoInput=document.getElementById("newPhoto-"+prefix);
   if(photoInput.files && photoInput.files[0]){
-    try{ item.photo=await resizeImageFile(photoInput.files[0]); }
+    try{ doc.photo=await resizeImageFile(photoInput.files[0]); }
     catch(e){ /* fall back silently to the auto-generated illustration */ }
   }
 
-  items.push(item);
-  saveItems();
-  document.getElementById("newName-"+prefix).value="";
-  document.getElementById("newPrice-"+prefix).value="";
-  clearNewPhoto(prefix);
-  renderMenu(); renderPriceAdmin(); renderBentoSelects();
-  alert("Item added to the menu.");
+  try{
+    await db.collection("menuItems").add(doc);
+    document.getElementById("newName-"+prefix).value="";
+    document.getElementById("newPrice-"+prefix).value="";
+    clearNewPhoto(prefix);
+    alert("Item added to the menu.");
+  }catch(e){
+    alert("Couldn't add item: "+e.message);
+  }
 }
 function searchStaff(){
   const q=document.getElementById("staffSearch").value.trim().toLowerCase();
@@ -1581,170 +1610,128 @@ function searchStaff(){
 }
 
 /* ============================================================
-   AUTH — hashed credentials + lockout after repeated failed attempts.
-   Still client-side (anyone with dev tools could technically bypass a
-   check running in their own browser), but this closes the easy holes:
-   no plaintext password sitting in localStorage, and no unlimited guessing.
+   AUTH — real Firebase Authentication, shared across every device.
+   Role (owner/staff) is looked up from a Firestore "roles" document
+   keyed by the signed-in user's UID after login.
    ============================================================ */
-const DEFAULT_ADMIN_PASSWORD="pihu1234";
-const DEFAULT_STAFF_PASSWORD="pihu@123";
-
-async function sha256Hex(str){
-  const enc=new TextEncoder().encode(str);
-  const buf=await crypto.subtle.digest("SHA-256", enc);
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
-}
-function randomHex(bytes){
-  return Array.from(crypto.getRandomValues(new Uint8Array(bytes))).map(b=>b.toString(16).padStart(2,"0")).join("");
-}
-function getAuthSalt(scope){
-  const key="pihuAuthSalt-"+scope;
-  let salt=localStorage.getItem(key);
-  if(!salt){ salt=randomHex(16); localStorage.setItem(key,salt); }
-  return salt;
-}
-async function setAuthSecret(scope, secret){
-  const hash=await sha256Hex(getAuthSalt(scope)+":"+secret);
-  localStorage.setItem("pihuAuthHash-"+scope, hash);
-}
-async function checkAuthSecret(scope, secret, legacyPlaintextKey, hardDefault){
-  const storedHash=localStorage.getItem("pihuAuthHash-"+scope);
-  if(!storedHash){
-    // first-ever check: migrate from an older plaintext value (or the documented default) into a hash
-    const legacyVal=legacyPlaintextKey ? localStorage.getItem(legacyPlaintextKey) : null;
-    const effectiveDefault=legacyVal || hardDefault;
-    if(secret===effectiveDefault){
-      await setAuthSecret(scope, secret);
-      if(legacyPlaintextKey) localStorage.removeItem(legacyPlaintextKey);
-      return true;
-    }
-    return false;
-  }
-  const hash=await sha256Hex(getAuthSalt(scope)+":"+secret);
-  return hash===storedHash;
-}
-function getLockRemaining(scope){
-  const until=Number(localStorage.getItem("pihuAuthLock-"+scope)||0);
-  const remain=until-Date.now();
-  return remain>0 ? remain : 0;
-}
-function registerAuthFail(scope, maxAttempts, lockMs){
-  const count=Number(localStorage.getItem("pihuAuthFail-"+scope)||0)+1;
-  if(count>=maxAttempts){
-    localStorage.setItem("pihuAuthLock-"+scope, String(Date.now()+lockMs));
-    localStorage.setItem("pihuAuthFail-"+scope, "0");
-    return {locked:true, remaining:0};
-  }
-  localStorage.setItem("pihuAuthFail-"+scope, String(count));
-  return {locked:false, remaining:maxAttempts-count};
-}
-function clearAuthFail(scope){
-  localStorage.removeItem("pihuAuthFail-"+scope);
-  localStorage.removeItem("pihuAuthLock-"+scope);
+function openLoginModal(){
+  document.getElementById("loginEmailInput").value="";
+  document.getElementById("loginPasswordInput").value="";
+  openModal("loginModal");
+  setTimeout(()=>document.getElementById("loginEmailInput").focus(),50);
 }
 
-/* --- Owner login (strictest protection: 5 attempts, then a 2-minute lockout) --- */
-function openAdminLogin(){
-  document.getElementById("adminPinInput").value="";
-  openModal("pinModal");
-  setTimeout(()=>document.getElementById("adminPinInput").focus(),50);
-}
-async function tryAdminLogin(){
-  const remain=getLockRemaining("admin");
-  if(remain>0){
-    alert(`Too many incorrect attempts. Try again in ${Math.ceil(remain/1000)} seconds.`);
-    return;
+async function tryLogin(){
+  const email=document.getElementById("loginEmailInput").value.trim();
+  const password=document.getElementById("loginPasswordInput").value;
+  if(!email || !password){ alert("Enter both email and password."); return; }
+  try{
+    await auth.signInWithEmailAndPassword(email, password);
+    closeModal("loginModal");
+    // onAuthStateChanged (below) picks up the sign-in and opens the right panel.
+  }catch(e){
+    alert("Sign-in failed — "+(e.message||"check your email and password."));
   }
-  const val=document.getElementById("adminPinInput").value;
-  const ok=await checkAuthSecret("admin", val, "pihuAdminPin", DEFAULT_ADMIN_PASSWORD);
-  if(ok){
-    clearAuthFail("admin");
-    sessionStorage.setItem("pihuAdminUnlocked","1");
-    closeModal("pinModal");
+}
+
+async function resolveRoleAndOpenPanel(user){
+  try{
+    const roleDoc=await db.collection("roles").doc(user.uid).get();
+    currentRole=roleDoc.exists ? roleDoc.data().role : null;
+  }catch(e){
+    console.error("Could not read role:", e);
+    currentRole=null;
+  }
+  if(currentRole==="owner"){
+    await seedDefaultsIfEmpty();
     openAdmin();
+  }else if(currentRole==="staff"){
+    openStaffPanel();
   }else{
-    const r=registerAuthFail("admin", 5, 120000);
-    alert(r.locked ? "Too many incorrect attempts — locked for 2 minutes." : `Incorrect password. ${r.remaining} attempt(s) left before a temporary lockout.`);
+    alert("This account doesn't have a role assigned yet. Ask the owner to assign one under Team Access.");
+    await auth.signOut();
   }
 }
+
+async function seedDefaultsIfEmpty(){
+  try{
+    const itemsSnap=await db.collection("menuItems").limit(1).get();
+    if(itemsSnap.empty){
+      const batch=db.batch();
+      defaultItems.forEach((it,idx)=>{
+        const ref=db.collection("menuItems").doc();
+        batch.set(ref, {...it, soldOut:false, order:Date.now()+idx});
+      });
+      await batch.commit();
+    }
+    const settingsSnap=await db.collection("config").doc("settings").get();
+    if(!settingsSnap.exists){
+      await db.collection("config").doc("settings").set(settings);
+    }
+  }catch(e){
+    console.error("Seeding failed:", e);
+  }
+}
+
 function openAdmin(){
   document.getElementById("admin").classList.add("open");
   renderPriceAdmin();
   renderBentoSelects();
-  loadStaffCredentialsToUI();
-  renderAdminSecurityWarning();
-  renderOrderLog();
+  attachOrdersListener();
   document.getElementById("admin").scrollIntoView({behavior:"smooth"});
 }
-function closeAdmin(){
+async function ownerSignOut(){
+  await auth.signOut();
   document.getElementById("admin").classList.remove("open");
-  sessionStorage.removeItem("pihuAdminUnlocked");
-}
-async function changeAdminPin(){
-  const v=document.getElementById("newPin").value;
-  if(v.length<6){ alert("Use at least 6 characters — mix in letters or symbols for a real password, not just a short PIN."); return; }
-  await setAuthSecret("admin", v);
-  localStorage.setItem("pihuAdminPasswordChanged","1");
-  document.getElementById("newPin").value="";
-  renderAdminSecurityWarning();
-  alert("Owner password updated. Remember it — there's no recovery for a browser-side password.");
-}
-function renderAdminSecurityWarning(){
-  const el=document.getElementById("adminSecurityWarning");
-  if(!el) return;
-  el.style.display=localStorage.getItem("pihuAdminPasswordChanged")==="1" ? "none" : "block";
-}
-
-/* --- Staff login: price + photo only, no other settings --- */
-function getStaffUser(){ return localStorage.getItem("pihuStaffUser")||"staff"; }
-function loadStaffCredentialsToUI(){
-  document.getElementById("staffUserSetting").value=getStaffUser();
-  document.getElementById("staffPassSetting").value="";
-}
-async function saveStaffCredentials(){
-  const u=document.getElementById("staffUserSetting").value.trim();
-  const p=document.getElementById("staffPassSetting").value;
-  if(!u){ alert("Username can't be empty."); return; }
-  if(p && p.length<6){ alert("Use at least 6 characters for the staff password."); return; }
-  localStorage.setItem("pihuStaffUser", u);
-  if(p){ await setAuthSecret("staffpass", p); }
-  document.getElementById("staffPassSetting").value="";
-  alert(p ? "Staff login updated." : "Staff username updated. (Password left unchanged — enter a new one to change it too.)");
-}
-function openStaffLogin(){
-  document.getElementById("staffUserInput").value="";
-  document.getElementById("staffPassInput").value="";
-  openModal("staffLoginModal");
-  setTimeout(()=>document.getElementById("staffUserInput").focus(),50);
-}
-async function tryStaffLogin(){
-  const remain=getLockRemaining("staffpass");
-  if(remain>0){
-    alert(`Too many incorrect attempts. Try again in ${Math.ceil(remain/1000)} seconds.`);
-    return;
-  }
-  const u=document.getElementById("staffUserInput").value.trim();
-  const p=document.getElementById("staffPassInput").value;
-  const passOk=await checkAuthSecret("staffpass", p, "pihuStaffPass", DEFAULT_STAFF_PASSWORD);
-  if(u===getStaffUser() && passOk){
-    clearAuthFail("staffpass");
-    sessionStorage.setItem("pihuStaffUnlocked","1");
-    closeModal("staffLoginModal");
-    openStaffPanel();
-  }else{
-    const r=registerAuthFail("staffpass", 6, 60000);
-    alert(r.locked ? "Too many incorrect attempts — locked for 60 seconds." : `Incorrect username or password. ${r.remaining} attempt(s) left before a temporary lockout.`);
-  }
+  detachOrdersListener();
 }
 function openStaffPanel(){
   document.getElementById("staffPanel").classList.add("open");
   renderPriceAdmin();
   document.getElementById("staffPanel").scrollIntoView({behavior:"smooth"});
 }
-function closeStaffPanel(){
+async function staffSignOut(){
+  await auth.signOut();
   document.getElementById("staffPanel").classList.remove("open");
-  sessionStorage.removeItem("pihuStaffUnlocked");
 }
+
+async function changeMyPassword(prefix){
+  const input=document.getElementById(prefix+"NewPassword");
+  const v=input.value;
+  if(v.length<6){ alert("Use at least 6 characters."); return; }
+  try{
+    await auth.currentUser.updatePassword(v);
+    input.value="";
+    alert("Password updated.");
+  }catch(e){
+    alert("Couldn't update password: "+e.message+" — Firebase sometimes requires a recent sign-in for this; sign out and back in, then try again.");
+  }
+}
+
+async function assignRole(){
+  const uid=document.getElementById("assignUid").value.trim();
+  const role=document.getElementById("assignRoleSelect").value;
+  if(!uid){ alert("Paste the person's User UID from Firebase Console → Authentication → Users."); return; }
+  try{
+    await db.collection("roles").doc(uid).set({role});
+    document.getElementById("assignUid").value="";
+    alert("Role assigned.");
+  }catch(e){
+    alert("Couldn't assign role: "+e.message);
+  }
+}
+
+auth.onAuthStateChanged(user=>{
+  currentUser=user;
+  if(user){
+    resolveRoleAndOpenPanel(user);
+  }else{
+    currentRole=null;
+    document.getElementById("admin").classList.remove("open");
+    document.getElementById("staffPanel").classList.remove("open");
+    detachOrdersListener();
+  }
+});
 
 /* close modals on backdrop click / Escape */
 document.addEventListener("click",e=>{
@@ -1795,23 +1782,44 @@ function initScrollReveal(){
 }
 
 /* ============================================================
+   LIVE DATA LISTENERS (public — menu & settings, no login needed)
+   ============================================================ */
+function attachMenuListener(){
+  db.collection("menuItems").orderBy("order","asc").onSnapshot(snap=>{
+    items=snap.docs.map(d=>({id:d.id, ...d.data()}));
+    renderMenu();
+    renderCart();
+    renderPriceAdmin();
+    renderBentoSelects();
+  }, err=>{
+    console.error("Menu listener error:", err);
+    document.getElementById("menuGrid").innerHTML=`<p class="cart-empty">Couldn't load the menu right now — please refresh.</p>`;
+  });
+}
+function attachSettingsListener(){
+  db.collection("config").doc("settings").onSnapshot(doc=>{
+    if(doc.exists){
+      settings={...settings, ...doc.data()};
+      applySettingsToUI();
+    }
+  }, err=>console.error("Settings listener error:", err));
+}
+
+/* ============================================================
    INIT
    ============================================================ */
 function init(){
   applySettingsToUI();
-  renderMenu();
-  renderCart();
+  attachMenuListener();
+  attachSettingsListener();
   loadCustomer();
   loadRating();
-  renderPriceAdmin();
-  renderBentoSelects();
-  if(sessionStorage.getItem("pihuAdminUnlocked")==="1") openAdmin();
-  if(sessionStorage.getItem("pihuStaffUnlocked")==="1") openStaffPanel();
   updateActiveNav();
   initScrollReveal();
 }
 if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", init);
 else init();
+
 </script>
 </body>
 </html>
