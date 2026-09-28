@@ -790,6 +790,14 @@ select{
     </div>
  
     <div class="card" style="margin-top:16px">
+      <h3 style="color:var(--gold-soft)">Cloud Sync</h3>
+      <p class="hint" style="margin-top:-4px" id="cloudSyncStatus">Checking status…</p>
+      <button class="btn btn-maroon" onclick="runCloudSetup()" id="cloudSetupBtn">Set Up Cloud Sync (one-time)</button>
+      <pre id="cloudSetupResult" style="white-space:pre-wrap;word-break:break-all;background:rgba(0,0,0,.3);border-radius:var(--radius-sm);padding:12px;font-size:.75rem;color:var(--on-surface-variant);margin-top:12px;display:none"></pre>
+      <p class="hint" style="margin-top:10px;margin-bottom:0">Syncs dish names, prices, sold-out status and settings across every device. Photos stay local to whichever device uploaded them — the free plan's storage is too small for images.</p>
+    </div>
+ 
+    <div class="card" style="margin-top:16px">
       <h3 style="color:var(--gold-soft)">Bento Highlights</h3>
       <label class="field"><span>Featured dish (large banner)</span><select id="featuredSelect" onchange="setFeatured(this.value)"></select></label>
       <label class="field"><span>Dish of the Day (square highlight)</span><select id="dishDaySelect" onchange="setDishOfDay(this.value)"></select></label>
@@ -911,6 +919,91 @@ const infoContent={
 };
  
 /* ============================================================
+   CLOUD SYNC — jsonstorage.net, text/settings only (no photos: free
+   tier caps each item at 64KB). Photos stay local to each device.
+   CLOUD_USER_ID / CLOUD_ITEM_ID are blank until the one-time setup
+   (Owner panel → Cloud Sync) has been run once and the resulting IDs
+   have been baked into this file.
+   ============================================================ */
+const CLOUD_API_KEY="69b01e54-f2ed-44d3-a2f2-53a76958d982";
+const CLOUD_USER_ID="";
+const CLOUD_ITEM_ID="";
+function cloudConfigured(){ return !!(CLOUD_USER_ID && CLOUD_ITEM_ID); }
+function cloudUrl(){ return `https://api.jsonstorage.net/v1/json/${CLOUD_USER_ID}/${CLOUD_ITEM_ID}?apiKey=${CLOUD_API_KEY}`; }
+function itemsForCloud(){
+  // strip photos before sending — they're local-only and would blow past the 64KB cap
+  return items.map(({photo, ...rest})=>rest);
+}
+async function fetchCloudData(){
+  if(!cloudConfigured()) return null;
+  try{
+    const res=await fetch(cloudUrl());
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    return await res.json();
+  }catch(e){
+    console.error("Cloud fetch failed, using local copy:", e);
+    return null;
+  }
+}
+async function pushCloudData(){
+  if(!cloudConfigured()) return;
+  try{
+    const res=await fetch(cloudUrl(), {
+      method:"PUT",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({items:itemsForCloud(), settings})
+    });
+    if(!res.ok) throw new Error("HTTP "+res.status);
+  }catch(e){
+    console.error("Cloud push failed (this device still has the change locally):", e);
+  }
+}
+function getLocalPhotos(){ return loadJSON("pihuLocalPhotosV1", {}); }
+function setLocalPhoto(name, dataUrl){
+  const p=getLocalPhotos(); p[name]=dataUrl;
+  localStorage.setItem("pihuLocalPhotosV1", JSON.stringify(p));
+}
+function clearLocalPhoto(name){
+  const p=getLocalPhotos(); delete p[name];
+  localStorage.setItem("pihuLocalPhotosV1", JSON.stringify(p));
+}
+function applyLocalPhotos(){
+  const p=getLocalPhotos();
+  items.forEach(it=>{ if(p[it.n]) it.photo=p[it.n]; });
+}
+ 
+async function runCloudSetup(){
+  const out=document.getElementById("cloudSetupResult");
+  out.style.display="block";
+  out.textContent="Creating shared storage…";
+  try{
+    const res=await fetch(`https://api.jsonstorage.net/v1/json?apiKey=${CLOUD_API_KEY}`, {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({items:itemsForCloud(), settings})
+    });
+    const text=await res.text();
+    if(!res.ok) throw new Error("HTTP "+res.status+" — "+text);
+    out.textContent="Success! Copy this ENTIRE response and send it to Claude so it can be built into the live site:\n\n"+text;
+  }catch(e){
+    out.textContent="Setup failed: "+e.message+"\n\nDouble-check the API key has Create permission, then try again.";
+  }
+}
+function renderCloudStatus(){
+  const el=document.getElementById("cloudSyncStatus");
+  const btn=document.getElementById("cloudSetupBtn");
+  if(!el) return;
+  if(cloudConfigured()){
+    el.textContent="✅ Cloud sync is active — changes here reach every device.";
+    if(btn) btn.style.display="none";
+  }else{
+    el.textContent="⚠ Not set up yet. Click below once, then send the result to Claude to finish activating it.";
+    if(btn) btn.style.display="inline-flex";
+  }
+}
+ 
+ 
+/* ============================================================
    HELPERS
    ============================================================ */
 function saveCart(){ localStorage.setItem("pihuCartV2", JSON.stringify(cart)); }
@@ -920,6 +1013,7 @@ function saveItems(){
   }catch(e){
     alert("Couldn't save — your browser's storage is full. Try removing a photo from another dish, or use a smaller image.");
   }
+  pushCloudData();
 }
 function money(n){ return Number(n||0).toFixed(0); }
 function cartTotal(){
@@ -1126,6 +1220,7 @@ function changeQty(i,d){
 }
 function removeItem(i){
   if(!confirm("Remove this dish from the menu for everyone?")) return;
+  clearLocalPhoto(items[i].n);
   items.splice(i,1);
   delete cart[i];
   const newCart={};
@@ -1424,6 +1519,7 @@ function saveSettings(){
   const maps=document.getElementById("mapsLink").value.trim();
   settings={name,phone:phone||"919712399261",upi:upi||"pihukitchen@okaxis",upiAlt,maps};
   localStorage.setItem("pihuSettingsV2", JSON.stringify(settings));
+  pushCloudData();
   applySettingsToUI();
   alert("Settings saved.");
 }
@@ -1536,7 +1632,7 @@ async function updateItemPhoto(i, inputEl){
   try{
     const photo=await resizeImageFile(inputEl.files[0]);
     items[i].photo=photo;
-    saveItems();
+    setLocalPhoto(items[i].n, photo); // local-only: not synced, stays on this device
     renderMenu();
     renderPriceAdmin();
   }catch(e){
@@ -1545,8 +1641,8 @@ async function updateItemPhoto(i, inputEl){
   inputEl.value="";
 }
 function removeItemPhoto(i){
+  clearLocalPhoto(items[i].n);
   delete items[i].photo;
-  saveItems();
   renderMenu();
   renderPriceAdmin();
 }
@@ -1558,13 +1654,18 @@ async function addNewItem(prefix){
  
   const item={n:name,p:price,veg:true,featured:false,dishOfDay:false,soldOut:false};
   const photoInput=document.getElementById("newPhoto-"+prefix);
+  let localPhoto=null;
   if(photoInput.files && photoInput.files[0]){
-    try{ item.photo=await resizeImageFile(photoInput.files[0]); }
+    try{ localPhoto=await resizeImageFile(photoInput.files[0]); }
     catch(e){ /* fall back silently to the auto-generated illustration */ }
   }
  
   items.push(item);
-  saveItems();
+  saveItems(); // syncs name/price/flags to the cloud (no photo — see below)
+  if(localPhoto){
+    item.photo=localPhoto;
+    setLocalPhoto(name, localPhoto); // local-only
+  }
   document.getElementById("newName-"+prefix).value="";
   document.getElementById("newPrice-"+prefix).value="";
   clearNewPhoto(prefix);
@@ -1674,6 +1775,7 @@ function openAdmin(){
   loadStaffCredentialsToUI();
   renderAdminSecurityWarning();
   renderOrderLog();
+  renderCloudStatus();
   document.getElementById("admin").scrollIntoView({behavior:"smooth"});
 }
 function closeAdmin(){
@@ -1798,6 +1900,7 @@ function initScrollReveal(){
    INIT
    ============================================================ */
 function init(){
+  applyLocalPhotos();
   applySettingsToUI();
   renderMenu();
   renderCart();
@@ -1809,6 +1912,27 @@ function init(){
   if(sessionStorage.getItem("pihuStaffUnlocked")==="1") openStaffPanel();
   updateActiveNav();
   initScrollReveal();
+  refreshFromCloud();
+}
+async function refreshFromCloud(){
+  if(!cloudConfigured()) return;
+  const data=await fetchCloudData();
+  if(!data) return; // fetch failed — keep showing the local cached copy
+  if(Array.isArray(data.items) && data.items.length){
+    items=data.items.map(it=>({featured:false,dishOfDay:false,soldOut:false,...it}));
+    if(!items.some(it=>it.featured)) items[0].featured=true;
+    applyLocalPhotos();
+    localStorage.setItem("pihuItemsV3", JSON.stringify(items.map(({photo,...rest})=>rest)));
+  }
+  if(data.settings){
+    settings={...settings, ...data.settings};
+    localStorage.setItem("pihuSettingsV2", JSON.stringify(settings));
+    applySettingsToUI();
+  }
+  renderMenu();
+  renderCart();
+  renderPriceAdmin();
+  renderBentoSelects();
 }
 if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", init);
 else init();
