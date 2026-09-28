@@ -693,7 +693,7 @@ select{
     <p class="sub">Enter your password to manage the menu &amp; settings</p>
     <label class="field"><span>Password</span><input type="password" id="adminPinInput" placeholder="Enter password" autocomplete="current-password"></label>
     <button class="btn btn-gold btn-block" onclick="tryAdminLogin()">Unlock</button>
-    <p class="hint" style="text-align:center;margin-top:14px">First time here? Default password is <b>pihu1234</b> — change it immediately once you're in, under "Change Owner Password." Repeated wrong attempts trigger a temporary lockout. This is browser-side protection, not enterprise security.</p>
+    <p class="hint" style="text-align:center;margin-top:14px">Owner access only. After your first login, set your own password under "Change Owner Password." Repeated wrong attempts trigger a temporary lockout. This is browser-side protection, not enterprise security.</p>
   </div>
 </div>
  
@@ -761,8 +761,8 @@ select{
     <div class="gold-divider" style="margin:16px 0 40px"></div>
  
     <div class="card" id="adminSecurityWarning" style="display:none;border-color:rgba(220,150,60,.5);background:rgba(220,150,60,.08)">
-      <h3 style="color:#e0a84a;font-size:1.05rem;margin-bottom:6px">⚠ Still using the default password</h3>
-      <p style="color:var(--on-surface-variant);font-size:.88rem;margin-bottom:0">Anyone who knows this site's default owner password could get in. Scroll down to <b>Change Owner Password</b> and set your own — it takes a few seconds.</p>
+      <h3 style="color:#e0a84a;font-size:1.05rem;margin-bottom:6px">⚠ Still using the temporary password</h3>
+      <p style="color:var(--on-surface-variant);font-size:.88rem;margin-bottom:0">Anyone who knows the temporary owner password could get in. Scroll down to <b>Change Owner Password</b> and set your own — it takes a few seconds.</p>
     </div>
  
     <div class="card">
@@ -926,8 +926,8 @@ const infoContent={
    have been baked into this file.
    ============================================================ */
 const CLOUD_API_KEY="69b01e54-f2ed-44d3-a2f2-53a76958d982";
-const CLOUD_USER_ID="";
-const CLOUD_ITEM_ID="";
+const CLOUD_USER_ID="ac8f2446-77bf-4e9d-b4f8-671f375eb924";
+const CLOUD_ITEM_ID="b2ddce42-8922-4b98-8d15-12da8619b35c";
 function cloudConfigured(){ return !!(CLOUD_USER_ID && CLOUD_ITEM_ID); }
 function cloudUrl(){ return `https://api.jsonstorage.net/v1/json/${CLOUD_USER_ID}/${CLOUD_ITEM_ID}?apiKey=${CLOUD_API_KEY}`; }
 function itemsForCloud(){
@@ -945,17 +945,50 @@ async function fetchCloudData(){
     return null;
   }
 }
-async function pushCloudData(){
-  if(!cloudConfigured()) return;
+function buildAuthPayload(){
+  const a={};
+  ["admin","staffpass"].forEach(sc=>{
+    const h=localStorage.getItem("pihuAuth2Hash-"+sc), sl=localStorage.getItem("pihuAuth2Salt-"+sc);
+    if(h && sl) a[sc]={hash:h, salt:sl};
+  });
+  const su=localStorage.getItem("pihuStaffUser"); if(su) a.staffUser=su;
+  return (a.admin||a.staffpass||a.staffUser) ? a : null;
+}
+function applyCloudAuth(a){
+  if(!a) return;
+  ["admin","staffpass"].forEach(sc=>{
+    if(a[sc] && a[sc].hash && a[sc].salt){
+      localStorage.setItem("pihuAuth2Salt-"+sc, a[sc].salt);
+      localStorage.setItem("pihuAuth2Hash-"+sc, a[sc].hash);
+    }
+  });
+  if(a.staffUser) localStorage.setItem("pihuStaffUser", a.staffUser);
+  if(a.admin) localStorage.setItem("pihuAdminPasswordChanged","1");
+}
+async function syncAuthFromCloud(){
+  const d=await fetchCloudData();
+  if(d && d.auth2) applyCloudAuth(d.auth2);
+}
+async function pushCloudData(opts={}){
+  if(!cloudConfigured()) return false;
   try{
+    const cur=await fetchCloudData();             // keep whatever password is already in the cloud
+    const curAuth=(cur && cur.auth2) || {};
+    let auth;
+    if(opts.auth){ auth={...curAuth, ...(buildAuthPayload()||{})}; }
+    else{ auth = cur ? curAuth : (buildAuthPayload()||{}); }
+    const body={items:itemsForCloud(), settings};
+    if(Object.keys(auth).length) body.auth2=auth;
     const res=await fetch(cloudUrl(), {
       method:"PUT",
       headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({items:itemsForCloud(), settings})
+      body:JSON.stringify(body)
     });
     if(!res.ok) throw new Error("HTTP "+res.status);
+    return true;
   }catch(e){
     console.error("Cloud push failed (this device still has the change locally):", e);
+    return false;
   }
 }
 function getLocalPhotos(){ return loadJSON("pihuLocalPhotosV1", {}); }
@@ -980,7 +1013,7 @@ async function runCloudSetup(){
     const res=await fetch(`https://api.jsonstorage.net/v1/json?apiKey=${CLOUD_API_KEY}`, {
       method:"POST",
       headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({items:itemsForCloud(), settings})
+      body:JSON.stringify({items:itemsForCloud(), settings, auth2:buildAuthPayload()||undefined})
     });
     const text=await res.text();
     if(!res.ok) throw new Error("HTTP "+res.status+" — "+text);
@@ -1690,8 +1723,12 @@ function searchStaff(){
    check running in their own browser), but this closes the easy holes:
    no plaintext password sitting in localStorage, and no unlimited guessing.
    ============================================================ */
-const DEFAULT_ADMIN_PASSWORD="pihu1234";
-const DEFAULT_STAFF_PASSWORD="pihu@123";
+/* No public default password. These are one-time TEMPORARY logins (hash only);
+   they are used only until the owner sets a real password, which then syncs to every device. */
+const INITIAL_AUTH={
+  admin:{salt:"78de3334525befc6c574a204896b25ac", hash:"f9dc8e1af3f2d8520d0325bf0f06fe9477d9a3e59111c8d15099d60e5df3657f"},
+  staffpass:{salt:"4d7707912a0fdd16398444b1938bd156", hash:"558bddc17cf57ca43b2053eef9853510b0a8d7831bcc4c8e23db6538ee28de55"}
+};
  
 async function sha256Hex(str){
   const enc=new TextEncoder().encode(str);
@@ -1701,30 +1738,16 @@ async function sha256Hex(str){
 function randomHex(bytes){
   return Array.from(crypto.getRandomValues(new Uint8Array(bytes))).map(b=>b.toString(16).padStart(2,"0")).join("");
 }
-function getAuthSalt(scope){
-  const key="pihuAuthSalt-"+scope;
-  let salt=localStorage.getItem(key);
-  if(!salt){ salt=randomHex(16); localStorage.setItem(key,salt); }
-  return salt;
-}
 async function setAuthSecret(scope, secret){
-  const hash=await sha256Hex(getAuthSalt(scope)+":"+secret);
-  localStorage.setItem("pihuAuthHash-"+scope, hash);
+  const salt=randomHex(16);
+  const hash=await sha256Hex(salt+":"+secret);
+  localStorage.setItem("pihuAuth2Salt-"+scope, salt);
+  localStorage.setItem("pihuAuth2Hash-"+scope, hash);
 }
-async function checkAuthSecret(scope, secret, legacyPlaintextKey, hardDefault){
-  const storedHash=localStorage.getItem("pihuAuthHash-"+scope);
-  if(!storedHash){
-    const legacyVal=legacyPlaintextKey ? localStorage.getItem(legacyPlaintextKey) : null;
-    const effectiveDefault=legacyVal || hardDefault;
-    if(secret===effectiveDefault){
-      await setAuthSecret(scope, secret);
-      if(legacyPlaintextKey) localStorage.removeItem(legacyPlaintextKey);
-      return true;
-    }
-    return false;
-  }
-  const hash=await sha256Hex(getAuthSalt(scope)+":"+secret);
-  return hash===storedHash;
+async function checkAuthSecret(scope, secret){
+  let salt=localStorage.getItem("pihuAuth2Salt-"+scope), hash=localStorage.getItem("pihuAuth2Hash-"+scope);
+  if(!salt || !hash){ salt=INITIAL_AUTH[scope].salt; hash=INITIAL_AUTH[scope].hash; }
+  return (await sha256Hex(salt+":"+secret))===hash;
 }
 function getLockRemaining(scope){
   const until=Number(localStorage.getItem("pihuAuthLock-"+scope)||0);
@@ -1759,7 +1782,8 @@ async function tryAdminLogin(){
     return;
   }
   const val=document.getElementById("adminPinInput").value;
-  const ok=await checkAuthSecret("admin", val, "pihuAdminPin", DEFAULT_ADMIN_PASSWORD);
+  await syncAuthFromCloud();
+  const ok=await checkAuthSecret("admin", val);
   if(ok){
     clearAuthFail("admin");
     sessionStorage.setItem("pihuAdminUnlocked","1");
@@ -1791,7 +1815,8 @@ async function changeAdminPin(){
   localStorage.setItem("pihuAdminPasswordChanged","1");
   document.getElementById("newPin").value="";
   renderAdminSecurityWarning();
-  alert("Owner password updated. Remember it — there's no recovery for a browser-side password.");
+  const ok=await pushCloudData({auth:true});
+  alert("Owner password updated"+(ok?" on all devices.":" on this device only — cloud sync is not active or failed, so other devices still have the old one.")+" Remember it — there's no recovery.");
 }
 function renderAdminSecurityWarning(){
   const el=document.getElementById("adminSecurityWarning");
@@ -1813,7 +1838,8 @@ async function saveStaffCredentials(){
   localStorage.setItem("pihuStaffUser", u);
   if(p){ await setAuthSecret("staffpass", p); }
   document.getElementById("staffPassSetting").value="";
-  alert(p ? "Staff login updated." : "Staff username updated. (Password left unchanged — enter a new one to change it too.)");
+  const ok=await pushCloudData({auth:true});
+  alert((p ? "Staff login updated." : "Staff username updated. (Password left unchanged.)")+(ok?" Applies on all devices.":" This device only — cloud sync is not active or failed."));
 }
 function openStaffLogin(){
   document.getElementById("staffUserInput").value="";
@@ -1829,7 +1855,8 @@ async function tryStaffLogin(){
   }
   const u=document.getElementById("staffUserInput").value.trim();
   const p=document.getElementById("staffPassInput").value;
-  const passOk=await checkAuthSecret("staffpass", p, "pihuStaffPass", DEFAULT_STAFF_PASSWORD);
+  await syncAuthFromCloud();
+  const passOk=await checkAuthSecret("staffpass", p);
   if(u===getStaffUser() && passOk){
     clearAuthFail("staffpass");
     sessionStorage.setItem("pihuStaffUnlocked","1");
@@ -1920,6 +1947,7 @@ async function refreshFromCloud(){
   if(!cloudConfigured()) return;
   const data=await fetchCloudData();
   if(!data) return; // fetch failed — keep showing the local cached copy
+  applyCloudAuth(data.auth2);
   if(Array.isArray(data.items) && data.items.length){
     items=data.items.map(it=>({featured:false,dishOfDay:false,soldOut:false,...it}));
     if(!items.some(it=>it.featured)) items[0].featured=true;
