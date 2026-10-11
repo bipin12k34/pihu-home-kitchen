@@ -860,14 +860,14 @@ select{
    STATE
    ============================================================ */
 const defaultItems=[
-  {n:"Dal Chawal",p:120,veg:true,featured:true,dishOfDay:false,soldOut:false,image:"images/dal-chawal.jpg"},
-  {n:"Khichdi",p:150,veg:true,featured:false,dishOfDay:false,soldOut:false,image:"images/khichdi.jpg"},
-  {n:"Veg Pulao",p:150,veg:true,featured:false,dishOfDay:false,soldOut:false,image:"images/veg-pulao.webp"},
-  {n:"Aloo Matar",p:170,veg:true,featured:false,dishOfDay:false,soldOut:false,image:"images/Aloo Matar.jpg"},
-  {n:"Shahi Paneer",p:160,veg:true,featured:false,dishOfDay:true,soldOut:false,image:"images/shahi_paneer.avif"},
-  {n:"Paneer Tufani",p:160,veg:true,featured:false,dishOfDay:false,soldOut:false,image:"images/Aloo Matar.jpg"},
-  {n:"Matar Paneer",p:160,veg:true,featured:false,dishOfDay:false,soldOut:false,image:"images/Matar Paneer.jpg"},
-{n:"Paneer Tava Masala",p:180,veg:true,featured:false,dishOfDay:false,soldOut:false,image:"images/paneer-tava-masala.jpg"}
+  {n:"Dal Chawal",p:120,veg:true,featured:true,dishOfDay:false,soldOut:false,image:"dal-chawal.jpg"},
+  {n:"Khichdi",p:150,veg:true,featured:false,dishOfDay:false,soldOut:false,image:"khichdi.jpg"},
+  {n:"Veg Pulao",p:150,veg:true,featured:false,dishOfDay:false,soldOut:false,image:"veg-pulao.webp"},
+  {n:"Aloo Matar",p:170,veg:true,featured:false,dishOfDay:false,soldOut:false,image:"Aloo Matar.jpg"},
+  {n:"Shahi Paneer",p:160,veg:true,featured:false,dishOfDay:true,soldOut:false,image:"shahi_paneer.avif"},
+  {n:"Paneer Tufani",p:160,veg:true,featured:false,dishOfDay:false,soldOut:false,image:"Paneer tufani.jpg"},
+  {n:"Matar Paneer",p:160,veg:true,featured:false,dishOfDay:false,soldOut:false,image:"Matar Paneer.jpg"},
+{n:"Paneer Tava Masala",p:180,veg:true,featured:false,dishOfDay:false,soldOut:false,image:"Paneer Tava Masala.jpg"}
 ];
  
 function loadJSON(key,fallback){
@@ -1075,7 +1075,7 @@ defaultItems.forEach(d=>{ if(d.image) defaultImageByName[d.n]=d.image; });
 const resolvedImg={};   // tried path -> working url (or null if nothing worked)
 
 function imagePathFor(it){
-  return it.image || defaultImageByName[it.n] || null;
+  return defaultImageByName[it.n] || it.image || null;   // built-in list wins over stale saved paths
 }
 function imgUrl(path){
   if(/^(data:|https?:|blob:)/i.test(path)) return path;
