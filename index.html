@@ -1063,10 +1063,59 @@ function orderId(){ return "PHK-"+Date.now().toString().slice(-6); }
 function escapeHTML(s){
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+/* ---- Food images (stored in the GitHub repo, /images folder) ----
+   IMAGE_BASE: leave "" if index.html and the images/ folder are in the same
+   GitHub Pages site. If the website is hosted elsewhere (Netlify, own domain...),
+   set it to e.g. "https://cdn.jsdelivr.net/gh/YOUR-USER/YOUR-REPO@main/" */
+const IMAGE_BASE="";
+// Built-in image for each default dish. Looked up by dish NAME, so images still show
+// even when old cloud / browser-saved data has no image field.
+const defaultImageByName={};
+defaultItems.forEach(d=>{ if(d.image) defaultImageByName[d.n]=d.image; });
+const resolvedImg={};   // tried path -> working url (or null if nothing worked)
+
+function imagePathFor(it){
+  return it.image || defaultImageByName[it.n] || null;
+}
+function imgUrl(path){
+  if(/^(data:|https?:|blob:)/i.test(path)) return path;
+  return IMAGE_BASE + encodeURI(path).replace(/'/g,"%27");   // spaces -> %20
+}
 function dishVisualStyle(it){
-  return it.image
-    ? `background-image:url('${it.image}')`
-    : `background-image:url('${dishArtDataUri(it.n)}')`;
+  if(it.photo) return `background-image:url('${it.photo}')`;           // photo uploaded in owner panel
+  const path=imagePathFor(it);
+  if(path){
+    const hit=resolvedImg[path];
+    if(hit===null) return `background-image:url('${dishArtDataUri(it.n)}')`;   // nothing worked -> illustration
+    return `background-image:url('${hit||imgUrl(path)}'),url('${dishArtDataUri(it.n)}')`;
+  }
+  return `background-image:url('${dishArtDataUri(it.n)}')`;
+}
+// GitHub Pages is case-sensitive and file extensions vary (.jpg/.jpeg/.png/.webp/.avif).
+// If the listed file 404s, quietly try the same name with other extensions / casing.
+function probeImage(url){
+  return new Promise(res=>{ const i=new Image(); i.onload=()=>res(true); i.onerror=()=>res(false); i.src=url; });
+}
+async function resolveDishImages(){
+  let changed=false;
+  for(const it of items){
+    const path=imagePathFor(it);
+    if(!path || it.photo || path in resolvedImg || /^(data:|blob:)/i.test(path)) continue;
+    if(await probeImage(imgUrl(path))){ resolvedImg[path]=imgUrl(path); continue; }
+    const m=path.match(/^(.*?)(\.[A-Za-z0-9]+)?$/), base=m[1];
+    const dir=base.includes("/")?base.slice(0,base.lastIndexOf("/")+1):"", file=base.slice(dir.length);
+    const bases=[...new Set([base, dir+file.toLowerCase(), dir+file.toLowerCase().replace(/[ _]+/g,"-"), dir+file.toLowerCase().replace(/[ -]+/g,"_")])];
+    let found=null;
+    outer: for(const b of bases) for(const ext of [".jpg",".jpeg",".png",".webp",".avif",".JPG",".PNG"]){
+      const cand=b+ext;
+      if(cand===path) continue;
+      if(await probeImage(imgUrl(cand))){ found=imgUrl(cand); break outer; }
+    }
+    resolvedImg[path]=found;      // null -> fall back to illustration
+    changed=true;
+    if(!found) console.warn("Food image not found in repo:", path);
+  }
+  if(changed) renderMenu();
 }
  
 /* ---- Procedural dish illustration (original artwork, no photos/stock needed) ---- */
@@ -1941,6 +1990,7 @@ function init(){
   if(sessionStorage.getItem("pihuStaffUnlocked")==="1") openStaffPanel();
   updateActiveNav();
   initScrollReveal();
+  resolveDishImages();
   refreshFromCloud();
 }
 async function refreshFromCloud(){
@@ -1963,6 +2013,7 @@ async function refreshFromCloud(){
   renderCart();
   renderPriceAdmin();
   renderBentoSelects();
+  resolveDishImages();
 }
 if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", init);
 else init();
@@ -1970,4 +2021,3 @@ else init();
 </script>
 </body>
 </html>
- 
